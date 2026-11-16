@@ -1,8 +1,12 @@
 # Fakturafix
 
+**Prova appen:** https://olleerikson-ux.github.io/fakturafix/
+
 Enkel fakturering för svenska frilansare och enskilda firmor. Allt körs i webbläsaren och data sparas lokalt.
 
 ## Kom igång
+
+Kräver Node.js 22 eller senare (se `.nvmrc`).
 
 ```bash
 npm install
