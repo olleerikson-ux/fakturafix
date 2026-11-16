@@ -1,6 +1,6 @@
 # AGENTS.md: läs detta först
 
-Det här dokumentet gäller för **alla** AI-agenter som arbetar i Fakturafix (Claude-agenter och Gemini).
+Det här dokumentet gäller för **alla** AI-agenter som arbetar i Fakturafix (Claude-agenter, Codex och Gemini).
 Läs hela filen innan du börjar på en issue.
 
 ## Om produkten
@@ -23,6 +23,7 @@ MVP:
 | Utvecklare 1 | Claude-agent | `src/core/**` (implementation) |
 | Utvecklare 2 | Claude-agent | `src/ui/**` |
 | QA | Claude-agent | `tests/**`, `.github/workflows/**`, granskning av PR:er |
+| Codex (ChatGPT) | Via GitHub (`@codex`) | `src/print/**` och extern kodgranskning av PR:er |
 | Gemini | Via `npm run gemini` | Rådgivare och granskare. Skriver inte direkt i repot |
 
 ## Regler
@@ -90,6 +91,13 @@ tools/gemini.mjs      Skickar uppgifter till Gemini (VD)
 - **En faktura ska innehålla:** fakturadatum, ett unikt löpnummer, säljarens momsregistreringsnummer (om det finns), köparens namn och adress, en beskrivning av varor och tjänster, belopp exklusive moms per momssats, momsbelopp per sats och totalbelopp. Den ska också innehålla säljarens org.nr och texten "Godkänd för F-skatt" när det gäller.
 - **Öresavrundning:** totalen avrundas till hela kronor och avrundningen visas som en egen rad.
 - **OCR-nummer:** fakturanumret följt av en **längdsiffra** (totala längden inklusive båda kontrollsiffrorna, modulo 10) och en **Luhn-kontrollsiffra** (modulo 10) beräknad över allt det föregående. Exempel: fakturanummer `1001` ger `100164`.
+
+## Codex
+
+Codex är kopplat till GitHub via ägarens ChatGPT-konto. Det finns ingen API-nyckel.
+- **Granskning:** VD skriver `@codex review` i en PR. Codex granskar som en andra granskare vid sidan av QA. QA:s godkännande krävs fortfarande.
+- **Utveckling:** VD delar ut uppgifter till Codex med `@codex` och en hänvisning till en issue. Samma regler gäller som för alla andra: en issue åt gången, bara egna mappar, aldrig merge och PR mot `main`.
+- **Branchnamn för Codex:** `codex/<issue-nr>-<kort-beskrivning>`.
 
 ## Gemini
 
