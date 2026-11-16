@@ -1,0 +1,106 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { CompanySettings, Store } from '../../core/index';
+import { createMemoryStore, fill } from '../test-utils';
+import { settingsView } from './settings';
+
+const testSettings: CompanySettings = {
+  name: 'Testfirman',
+  orgNumber: '556000-0000',
+  address: { street: 'Testgatan 1', postalCode: '123 45', city: 'Teststad' },
+  bankgiro: '123-4567',
+  fSkatt: true,
+  paymentTermsDays: 20,
+  lateInterestPercent: 8.5,
+};
+
+function getForm(root: HTMLElement): HTMLFormElement {
+  const form = root.querySelector('form');
+  if (!form) throw new Error('Formuläret saknas');
+  return form;
+}
+
+function input(form: HTMLFormElement, name: string): HTMLInputElement {
+  return form.elements.namedItem(name) as HTMLInputElement;
+}
+
+describe('settingsView', () => {
+  let root: HTMLElement;
+  let store: Store;
+
+  beforeEach(() => {
+    root = document.createElement('div');
+    document.body.append(root);
+    store = createMemoryStore();
+  });
+
+  afterEach(() => {
+    root.remove();
+  });
+
+  it('visar ett tomt formulär med 30 dagars betalningsvillkor som standard', () => {
+    settingsView(root, store);
+    const form = getForm(root);
+    expect(root.querySelector('h1')?.textContent).toBe('Inställningar');
+    expect(input(form, 'name').value).toBe('');
+    expect(input(form, 'paymentTermsDays').value).toBe('30');
+    expect(input(form, 'fSkatt').checked).toBe(false);
+    for (const el of form.querySelectorAll('input')) {
+      expect(root.querySelector(`label[for="${el.id}"]`)).not.toBeNull();
+    }
+  });
+
+  it('fyller i sparade inställningar', () => {
+    store.saveSettings(testSettings);
+    settingsView(root, store);
+    const form = getForm(root);
+    expect(input(form, 'name').value).toBe('Testfirman');
+    expect(input(form, 'bankgiro').value).toBe('123-4567');
+    expect(input(form, 'fSkatt').checked).toBe(true);
+    expect(input(form, 'paymentTermsDays').value).toBe('20');
+    expect(input(form, 'lateInterestPercent').value).toBe('8,5');
+  });
+
+  it('sparar inställningarna och visar en bekräftelse', () => {
+    settingsView(root, store);
+    const form = getForm(root);
+    fill(form, 'name', 'Testfirman');
+    fill(form, 'orgNumber', '556000-0000');
+    fill(form, 'street', 'Testgatan 1');
+    fill(form, 'postalCode', '12345');
+    fill(form, 'city', 'Teststad');
+    fill(form, 'bankgiro', '123-4567');
+    fill(form, 'lateInterestPercent', '8,5');
+    input(form, 'fSkatt').checked = true;
+    form.requestSubmit();
+
+    expect(store.getSettings()).toEqual({
+      name: 'Testfirman',
+      orgNumber: '556000-0000',
+      vatNumber: undefined,
+      address: { street: 'Testgatan 1', postalCode: '123 45', city: 'Teststad' },
+      email: undefined,
+      phone: undefined,
+      bankgiro: '123-4567',
+      plusgiro: undefined,
+      fSkatt: true,
+      paymentTermsDays: 30,
+      lateInterestPercent: 8.5,
+    });
+    expect(root.querySelector('[role="status"]')?.textContent).toContain('Inställningarna är sparade');
+  });
+
+  it('visar fel och sparar inte när uppgifter saknas eller är felaktiga', () => {
+    settingsView(root, store);
+    const form = getForm(root);
+    fill(form, 'postalCode', '999');
+    fill(form, 'paymentTermsDays', 'trettio');
+    form.requestSubmit();
+
+    expect(store.getSettings()).toBeUndefined();
+    expect(root.querySelector('#inst-name-error')?.textContent).toBe('Ange företagets namn.');
+    expect(root.querySelector('#inst-orgNumber-error')?.textContent).toBe('Ange organisationsnummer.');
+    expect(root.querySelector('#inst-postalCode-error')?.textContent).toContain('5 siffror');
+    expect(root.querySelector('#inst-paymentTermsDays-error')?.textContent).toContain('antal dagar');
+    expect(root.querySelector('[role="status"]')?.textContent).toBe('');
+  });
+});
