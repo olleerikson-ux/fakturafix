@@ -26,6 +26,10 @@ export { createLocalStore } from './storage';
 // ---- Kreditfakturor ----
 export { createCreditNote } from './credit';
 
+// ---- Säkerhetskopiering ----
+export { exportBackup, parseBackup, importBackup } from './backup';
+export type { Backup } from './backup';
+
 export interface Store {
   listCustomers(): Customer[];
   getCustomer(id: string): Customer | undefined;
@@ -42,6 +46,16 @@ export interface Store {
   deleteInvoice(id: string): void;
   /** Nästa lediga fakturanummer (första är 1001). */
   nextInvoiceNumber(): number;
+  /**
+   * Ersätter ALL data (kunder, fakturor, inställningar, högvattenmärke) med
+   * innehållet i en validerad säkerhetskopia. Används bara av importBackup.
+   */
+  replaceAll(data: {
+    customers: Customer[];
+    invoices: Invoice[];
+    settings?: CompanySettings;
+    lastInvoiceNumber: number;
+  }): void;
 
   getSettings(): CompanySettings | undefined;
   saveSettings(settings: CompanySettings): void;

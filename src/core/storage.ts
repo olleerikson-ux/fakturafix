@@ -294,6 +294,13 @@ export function createLocalStore(storageArg?: Storage): Store {
       writeJson(storage, KEYS.invoices, raw.filter((value) => !hasId(value, id)));
     },
     nextInvoiceNumber: () => lastInvoiceNumber() + 1,
+    replaceAll: (data) => {
+      writeJson(storage, KEYS.customers, data.customers);
+      writeJson(storage, KEYS.invoices, data.invoices);
+      writeJson(storage, KEYS.lastInvoiceNumber, data.lastInvoiceNumber);
+      if (data.settings) writeJson(storage, KEYS.settings, data.settings);
+      else storage?.removeItem(KEYS.settings);
+    },
 
     getSettings: () => {
       const value = readJson(storage, KEYS.settings);
