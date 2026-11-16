@@ -112,5 +112,4 @@ describe('utfärdade fakturor raderas aldrig', () => {
     }
     expect(store.getInvoice('a')?.number).toBe(1001);
   });
-
 });
