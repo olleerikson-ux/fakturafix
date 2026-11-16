@@ -202,12 +202,49 @@ describe('invoiceFormView', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     button(root, 'Markera som skickad').click();
 
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('nummer 1001'));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('nästa fakturanummer'));
     expect(store.getInvoice('f1')).toMatchObject({ number: 1001, ocr: '100164', status: 'sent' });
     expect(root.querySelector('h1')?.textContent).toBe('Faktura 1001');
     expect(root.querySelector('[role="status"]')?.textContent).toContain('OCR-nummer: 100164');
     expect(root.querySelector<HTMLFieldSetElement>('.invoice-content')?.disabled).toBe(true);
     expect([...root.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Spara utkast');
+  });
+
+  it('hämtar fakturanumret först efter bekräftelsen', () => {
+    store.saveInvoice(draft);
+    invoiceFormView(root, store, 'f1');
+    // En annan flik utfärdar faktura 1001 medan dialogen står öppen.
+    vi.spyOn(window, 'confirm').mockImplementation(() => {
+      createLocalStore(localStorage).saveInvoice({ ...draft, id: 'annan', number: 1001, ocr: '100164', status: 'sent' });
+      return true;
+    });
+    button(root, 'Markera som skickad').click();
+
+    expect(store.getInvoice('f1')).toMatchObject({ number: 1002, ocr: '100263', status: 'sent' });
+  });
+
+  it('ber användaren försöka igen om numret inte kan sparas', () => {
+    store.saveInvoice(draft);
+    invoiceFormView(root, store, 'f1');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.spyOn(store, 'saveInvoice').mockImplementation(() => {
+      throw new Error('Fakturanummer 1001 används redan.');
+    });
+    button(root, 'Markera som skickad').click();
+
+    expect(root.querySelector('[role="status"] .notice-error')?.textContent).toBe(
+      'Fakturanummer 1001 används redan. Försök igen.',
+    );
+  });
+
+  it('skickar inte en faktura med negativt belopp', () => {
+    store.saveInvoice({ ...draft, lines: [{ ...draft.lines[0]!, unitPrice: -100000 }] });
+    invoiceFormView(root, store, 'f1');
+    const confirm = vi.spyOn(window, 'confirm');
+    button(root, 'Markera som skickad').click();
+
+    expect(confirm).not.toHaveBeenCalled();
+    expect(root.querySelector('[role="status"]')?.textContent).toContain('negativt belopp');
   });
 
   it('skickar inte om användaren avbryter bekräftelsen', () => {

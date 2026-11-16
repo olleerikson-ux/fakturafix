@@ -10,6 +10,7 @@ import {
   calculateTotals,
   createOcr,
   formatSek,
+  isValidIsoDate,
   lineNet,
   newId,
   parseSek,
@@ -57,13 +58,6 @@ export interface InvoiceInput {
 
 export type SaveMode = 'draft' | 'send';
 
-/** Giltigt datum på formen YYYY-MM-DD. */
-export function isIsoDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
-}
-
 /** Tolkar antal som "2", "1,5" eller "1.5". Måste vara större än noll, annars null. */
 export function parseQuantity(value: string): number | null {
   const text = value.replace(/\s+/g, '');
@@ -109,8 +103,8 @@ export function toInvoiceLine(line: LineInput): InvoiceLine | null {
 export function validateInvoice(input: InvoiceInput, mode: SaveMode): FieldErrors {
   const errors: FieldErrors = {};
   if (!input.customerId) errors.customerId = 'Välj en kund.';
-  if (!isIsoDate(input.issueDate)) errors.issueDate = 'Ange fakturadatum som ÅÅÅÅ-MM-DD.';
-  if (!isIsoDate(input.dueDate)) errors.dueDate = 'Ange förfallodatum som ÅÅÅÅ-MM-DD.';
+  if (!isValidIsoDate(input.issueDate)) errors.issueDate = 'Ange fakturadatum som ÅÅÅÅ-MM-DD.';
+  if (!isValidIsoDate(input.dueDate)) errors.dueDate = 'Ange förfallodatum som ÅÅÅÅ-MM-DD.';
   else if (!errors.issueDate && input.dueDate < input.issueDate) {
     errors.dueDate = 'Förfallodatum kan inte vara före fakturadatum.';
   }
@@ -354,21 +348,23 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
         announce('Lägg till minst en rad innan du skickar fakturan.', 'error');
         return;
       }
+      if (calculateTotals(parsedLines(input)).total < 0) {
+        announce('En faktura med negativt belopp kan inte skickas. Kreditfakturor stöds inte än.', 'error');
+        return;
+      }
+      const question = 'Fakturan får nästa fakturanummer och kan sedan inte ändras eller raderas. Markera som skickad?';
+      if (!window.confirm(question)) return;
     }
 
     let invoice: Invoice;
     try {
-      const number = mode === 'send' ? store.nextInvoiceNumber() : 0;
-      if (
-        mode === 'send' &&
-        !window.confirm(`Fakturan får nummer ${number} och kan sedan inte ändras eller raderas. Markera som skickad?`)
-      ) {
-        return;
-      }
-      invoice = buildInvoice(input, mode, number);
+      // Numret hämtas först efter bekräftelsen, direkt före sparningen, så att en
+      // annan flik inte hinner dela ut samma nummer medan dialogen står öppen.
+      invoice = buildInvoice(input, mode, mode === 'send' ? store.nextInvoiceNumber() : 0);
       store.saveInvoice(invoice);
     } catch (error) {
-      announce(errorMessage(error, 'Fakturan kunde inte sparas. Försök igen.'), 'error');
+      const message = errorMessage(error, 'Fakturan kunde inte sparas.');
+      announce(/försök igen/i.test(message) ? message : `${message} Försök igen.`, 'error');
       return;
     }
     setHash(`#/fakturor/${invoice.id}`);
@@ -434,7 +430,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
   form.addEventListener('input', (event) => {
     const target = event.target;
     if (target instanceof HTMLInputElement && target.name === 'dueDate') dueDateTouched = true;
-    if (target instanceof HTMLInputElement && target.name === 'issueDate' && !dueDateTouched && isIsoDate(target.value)) {
+    if (target instanceof HTMLInputElement && target.name === 'issueDate' && !dueDateTouched && isValidIsoDate(target.value)) {
       const due = form.elements.namedItem('dueDate');
       if (due instanceof HTMLInputElement) due.value = addDays(target.value, termsDays);
     }
