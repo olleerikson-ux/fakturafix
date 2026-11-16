@@ -95,6 +95,14 @@ describe("säkerhetskopiering", () => {
     expect(target.nextInvoiceNumber()).toBe(1003);
   });
 
+  it("återanvänder inte nummer som delats ut efter backupen", () => {
+    const backup = exportBackup(source);
+    source.saveInvoice(invoice("c", 1003));
+    importBackup(source, parseBackup(JSON.stringify(backup)), "replace");
+    expect(source.getInvoice("c")).toBeUndefined();
+    expect(source.nextInvoiceNumber()).toBe(1004);
+  });
+
   it("behåller ett högre högvattenmärke än högsta fakturan", () => {
     const backup = { ...exportBackup(source), lastInvoiceNumber: 1010 };
     const target = createLocalStore(memory());
