@@ -57,7 +57,15 @@ export interface InvoiceLine {
 export type InvoiceStatus = 'draft' | 'sent' | 'paid';
 
 /** Status som visas i översikten. */
-export type InvoiceDisplayStatus = 'draft' | 'unpaid' | 'overdue' | 'paid';
+export type InvoiceDisplayStatus =
+  | 'draft'
+  | 'unpaid'
+  | 'overdue'
+  | 'paid'
+  /** Ursprungsfaktura som har en utfärdad kreditfaktura. */
+  | 'credited'
+  /** Utfärdad kreditfaktura. */
+  | 'credit-note';
 
 export interface Invoice {
   id: string;
@@ -75,6 +83,8 @@ export interface Invoice {
   status: InvoiceStatus;
   paidDate?: IsoDate;
   notes?: string;
+  /** Id för den faktura som krediteras. Satt bara på kreditfakturor. */
+  creditFor?: string;
   createdAt: string;
 }
 
