@@ -53,7 +53,7 @@ describe('createLocalStore: fakturor', () => {
 
   it('tar bort ett utkast', () => {
     const store = createLocalStore(memoryStorage());
-    const draft = invoice({ status: 'draft' });
+    const draft = invoice({ status: 'draft', number: 0, ocr: '' });
     store.saveInvoice(draft);
     store.deleteInvoice(draft.id);
     expect(store.listInvoices()).toEqual([]);
