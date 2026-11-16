@@ -59,7 +59,9 @@ export function invoice(overrides: Partial<Invoice> = {}): Invoice {
     customerId: 'kund-1',
     issueDate: '2026-03-01',
     dueDate: '2026-03-31',
-    lines: [line(1, 100000, 25)],
+    lines: [
+      { id: 'rad-standard', description: 'Konsulttimme', quantity: 1, unit: 'tim', unitPrice: 100000, vatRate: 25 },
+    ],
     ocr: '100164',
     status: 'sent',
     createdAt: '2026-03-01T10:00:00.000Z',
