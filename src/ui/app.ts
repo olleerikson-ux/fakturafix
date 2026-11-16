@@ -6,6 +6,7 @@
 import type { Store } from '../core/index';
 import { h } from './dom';
 import { customersView } from './views/customers';
+import { overviewView } from './views/overview';
 import { invoiceFormView } from './views/invoice-form';
 import { settingsView } from './views/settings';
 
@@ -17,14 +18,8 @@ interface Route {
   view: View;
 }
 
-const placeholder =
-  (title: string): View =>
-  (root) => {
-    root.replaceChildren(h('h1', {}, title), h('p', {}, 'Kommer snart.'));
-  };
-
 const routes: Route[] = [
-  { path: '/oversikt', label: 'Översikt', view: placeholder('Översikt') },
+  { path: '/oversikt', label: 'Översikt', view: overviewView },
   { path: '/fakturor/ny', label: 'Ny faktura', view: (root, store) => invoiceFormView(root, store) },
   { path: '/kunder', label: 'Kunder', view: customersView },
   { path: '/installningar', label: 'Inställningar', view: settingsView },
