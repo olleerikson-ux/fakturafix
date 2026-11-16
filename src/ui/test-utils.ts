@@ -25,6 +25,13 @@ export function createMemoryStore(): Store {
       invoices.delete(id);
     },
     nextInvoiceNumber: () => Math.max(1000, ...[...invoices.values()].map((i) => i.number)) + 1,
+    replaceAll: (data) => {
+      customers.clear();
+      invoices.clear();
+      data.customers.forEach((customer) => customers.set(customer.id, structuredClone(customer)));
+      data.invoices.forEach((invoice) => invoices.set(invoice.id, structuredClone(invoice)));
+      settings = data.settings ? structuredClone(data.settings) : undefined;
+    },
     getSettings: () => settings,
     saveSettings: (next) => {
       settings = structuredClone(next);
