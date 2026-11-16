@@ -77,9 +77,9 @@ describe('createLocalStore: fakturanummer', () => {
 
   it('ger högsta numret plus 1', () => {
     const store = createLocalStore(memoryStorage());
-    store.saveInvoice(invoice({ id: 'x', number: 1005 }));
+    store.saveInvoice(invoice({ id: 'x', number: 1001 }));
     store.saveInvoice(invoice({ id: 'y', number: 1002 }));
-    expect(store.nextInvoiceNumber()).toBe(1006);
+    expect(store.nextInvoiceNumber()).toBe(1003);
   });
 });
 
