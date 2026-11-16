@@ -89,7 +89,7 @@ tools/gemini.mjs      Skickar uppgifter till Gemini (VD)
 
 - **Momssatser:** 25 % (standard), 12 % (livsmedel, hotell), 6 % (böcker, persontransport, kultur) och 0 % (momsfritt eller export).
 - **En faktura ska innehålla:** fakturadatum, ett unikt löpnummer, säljarens momsregistreringsnummer (om det finns), köparens namn och adress, en beskrivning av varor och tjänster, belopp exklusive moms per momssats, momsbelopp per sats och totalbelopp. Den ska också innehålla säljarens org.nr och texten "Godkänd för F-skatt" när det gäller.
-- **Löpnummer:** fakturanumren ska bilda en obruten serie och får aldrig återanvändas. En utfärdad faktura (status skild från `draft`) får aldrig raderas. Den rättas med en kreditfaktura.
+- **Löpnummer:** fakturanumren ska bilda en obruten serie och får aldrig återanvändas. Utkast har `number: 0` och `ocr: ''`. Numret och OCR-numret delas ut först när fakturan utfärdas (`status: 'sent'`). En utfärdad faktura får aldrig raderas, eftersom `deleteInvoice` kastar fel. Den rättas med en kreditfaktura.
 - **Öresavrundning:** totalen avrundas till hela kronor och avrundningen visas som en egen rad.
 - **OCR-nummer:** fakturanumret följt av en **längdsiffra** (totala längden inklusive båda kontrollsiffrorna, modulo 10) och en **Luhn-kontrollsiffra** (modulo 10) beräknad över allt det föregående. Exempel: fakturanummer `1001` ger `100164`.
 

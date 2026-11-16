@@ -61,13 +61,16 @@ export type InvoiceDisplayStatus = 'draft' | 'unpaid' | 'overdue' | 'paid';
 
 export interface Invoice {
   id: string;
-  /** Löpande fakturanummer, börjar på 1001. */
+  /**
+   * Löpande fakturanummer, börjar på 1001. Utkast har 0. Numret delas ut när
+   * fakturan utfärdas (status 'sent'), så att serien blir obruten.
+   */
   number: number;
   customerId: string;
   issueDate: IsoDate;
   dueDate: IsoDate;
   lines: InvoiceLine[];
-  /** OCR-nummer med kontrollsiffror, se core/ocr.ts. */
+  /** OCR-nummer med kontrollsiffror, se core/ocr.ts. Tom sträng för utkast. */
   ocr: string;
   status: InvoiceStatus;
   paidDate?: IsoDate;
