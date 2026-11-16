@@ -16,7 +16,7 @@ export function printInvoice(store: Store, invoiceId: string): string | undefine
   document.getElementById(PRINT_ROOT_ID)?.remove();
   const holder = document.createElement('div');
   holder.id = PRINT_ROOT_ID;
-  holder.append(renderInvoice(invoice, customer, settings));
+  holder.append(renderInvoice(invoice, customer, settings, invoice.creditFor ? store.getInvoice(invoice.creditFor) : undefined));
   document.body.append(holder);
   window.addEventListener('afterprint', () => holder.remove(), { once: true });
   window.print();

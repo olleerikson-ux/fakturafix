@@ -146,3 +146,8 @@
     display: block;
   }
 }
+
+.invoice-print .inv-credit-ref {
+  font-weight: 600;
+  margin: 0 0 12pt;
+}

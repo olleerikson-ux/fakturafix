@@ -34,6 +34,13 @@ describe('computeKpis', () => {
   });
 });
 
+describe('computeKpis med kreditfakturor', () => {
+  it('ger netto noll för en helt krediterad obetald faktura', () => {
+    const credit = invoice('c', { number: 1002, creditFor: 'a', issueDate: '2026-02-01', lines: [{ id: 'l', description: 'Tjänst', quantity: -1, unitPrice: 10000, vatRate: 25 }] });
+    expect(computeKpis([invoice('a', { dueDate: '2026-12-31' }), credit], '2026-06-01')).toEqual({ unpaid: 0, overdue: 0, paidThisYear: 0 });
+  });
+});
+
 describe('statusLabel', () => {
   it('faller tillbaka på rått värde för okända statusar', () => {
     expect(statusLabel('overdue')).toBe('Förfallen');

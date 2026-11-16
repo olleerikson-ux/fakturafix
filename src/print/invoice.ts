@@ -43,7 +43,17 @@ function numberText(quantity: number): string {
   return String(quantity).replace('.', ',');
 }
 
-export function renderInvoice(invoice: Invoice, customer: Customer, settings: CompanySettings): HTMLElement {
+/**
+ * Renderar fakturan. För en kreditfaktura (creditFor satt) skickas ursprungsfakturan med
+ * som original, så att "Avser faktura nr X, daterad Y" kan skrivas ut.
+ */
+export function renderInvoice(
+  invoice: Invoice,
+  customer: Customer,
+  settings: CompanySettings,
+  original?: Invoice,
+): HTMLElement {
+  const isCredit = invoice.creditFor !== undefined;
   const totals = calculateTotals(invoice.lines);
   const root = el('article', 'invoice-print');
 
@@ -51,9 +61,9 @@ export function renderInvoice(invoice: Invoice, customer: Customer, settings: Co
   meta.append(
     metaRow('Fakturanummer', invoice.number ? String(invoice.number) : 'Utkast'),
     metaRow('Fakturadatum', invoice.issueDate),
-    metaRow('Förfallodatum', invoice.dueDate),
+    ...(isCredit ? [] : [metaRow('Förfallodatum', invoice.dueDate)]),
   );
-  if (invoice.ocr) meta.append(metaRow('OCR-nummer', invoice.ocr));
+  if (invoice.ocr && !isCredit) meta.append(metaRow('OCR-nummer', invoice.ocr));
   if (customer.reference) meta.append(metaRow('Er referens', customer.reference));
 
   root.append(
@@ -61,7 +71,7 @@ export function renderInvoice(invoice: Invoice, customer: Customer, settings: Co
       'header',
       'inv-header',
       el('div', 'inv-seller', el('strong', 'inv-seller-name', settings.name)),
-      el('div', 'inv-title', el('h1', undefined, 'FAKTURA'), meta),
+      el('div', 'inv-title', el('h1', undefined, isCredit ? 'KREDITFAKTURA' : 'FAKTURA'), meta),
     ),
   );
 
@@ -72,6 +82,10 @@ export function renderInvoice(invoice: Invoice, customer: Customer, settings: Co
   ].filter(Boolean);
   if (buyerIds.length > 0) buyer.append(el('p', 'inv-small', ...lines(...buyerIds)));
   root.append(buyer);
+  if (isCredit) {
+    const ref = original ? `Avser faktura nr ${original.number}, daterad ${original.issueDate}` : 'Avser en tidigare faktura';
+    root.append(el('p', 'inv-credit-ref', ref));
+  }
 
   const rows = invoice.lines.map((line) =>
     el(
@@ -108,14 +122,15 @@ export function renderInvoice(invoice: Invoice, customer: Customer, settings: Co
         sumRow('Summa exkl. moms', formatSek(totals.net)),
         ...vatRows,
         ...(totals.rounding !== 0 ? [sumRow('Öresavrundning', formatSek(totals.rounding))] : []),
-        sumRow('Att betala', formatSek(totals.total), 'inv-total'),
+        isCredit ? sumRow('Att få tillbaka', formatSek(-totals.total), 'inv-total') : sumRow('Att betala', formatSek(totals.total), 'inv-total'),
       ),
     ),
   );
 
   if (invoice.notes) root.append(el('p', 'inv-notes', invoice.notes));
 
-  const payRows = [
+  const creditRows: [string, string][] = [['Att få tillbaka', formatSek(-totals.total)]];
+  const payRows = isCredit ? creditRows : [
     settings.bankgiro ? ['Bankgiro', settings.bankgiro] : undefined,
     settings.plusgiro ? ['Plusgiro', settings.plusgiro] : undefined,
     invoice.ocr ? ['OCR-nummer', invoice.ocr] : undefined,
@@ -126,7 +141,8 @@ export function renderInvoice(invoice: Invoice, customer: Customer, settings: Co
     el(
       'section',
       'inv-payment',
-      el('h2', undefined, 'Betalning'),
+      el('h2', undefined, isCredit ? 'Återbetalning' : 'Betalning'),
+      ...(isCredit ? [el('p', 'inv-small', 'Beloppet betalas tillbaka eller dras av på kommande fakturor. Ingen betalning krävs.')] : []),
       el('dl', undefined, ...payRows.map(([label, value]) => metaRow(label, value))),
     ),
   );

@@ -319,6 +319,29 @@ describe('invoiceFormView', () => {
     expect(root.querySelector('[role="status"] .notice-error')?.textContent).toContain('kreditfaktura');
   });
 
+  it('Kreditera skapar ett kreditutkast med negativa antal och hänvisning till originalet', () => {
+    store.saveInvoice({ ...draft, number: 1001, ocr: '100164', status: 'sent' });
+    store.saveSettings(settings);
+    invoiceFormView(root, store, 'f1');
+    button(root, 'Kreditera').click();
+
+    const credit = store.listInvoices().find((i) => i.creditFor === 'f1');
+    expect(credit?.status).toBe('draft');
+    expect(credit?.lines[0]?.quantity).toBe(-1.5);
+    expect(root.querySelector('h1')?.textContent).toBe('Kreditfaktura (utkast)');
+    expect(root.textContent).toContain('Avser faktura nr 1001, daterad 2026-03-01');
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    button(root, 'Markera som skickad').click();
+    const issued = store.getInvoice(credit?.id ?? '');
+    expect(issued?.status).toBe('sent');
+    expect(issued?.creditFor).toBe('f1');
+    expect(root.querySelector('h1')?.textContent).toBe(`Kreditfaktura ${issued?.number}`);
+
+    invoiceFormView(root, store, 'f1');
+    expect([...root.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Kreditera');
+  });
+
   it('visar en utfärdad faktura skrivskyddad', () => {
     store.saveInvoice({ ...draft, number: 1001, ocr: '100164', status: 'sent' });
     invoiceFormView(root, store, 'f1');
@@ -326,13 +349,21 @@ describe('invoiceFormView', () => {
     expect(root.querySelector('h1')?.textContent).toBe('Faktura 1001');
     expect(root.textContent).toContain('kreditfaktura');
     expect(root.querySelector<HTMLFieldSetElement>('.invoice-content')?.disabled).toBe(true);
-    expect([...root.querySelectorAll('.form-actions button')].map((b) => b.textContent)).toEqual(['Skriv ut']);
+    expect([...root.querySelectorAll('.form-actions button')].map((b) => b.textContent)).toEqual(['Skriv ut', 'Kreditera']);
     expect(totalsText(root)).toContain(formatSek(187500));
   });
 
   it('visar ett meddelande om fakturan inte finns', () => {
     invoiceFormView(root, store, 'finns-inte');
     expect(root.textContent).toContain('Fakturan finns inte');
+  });
+});
+
+describe('kreditantal', () => {
+  it('parseQuantity kräver negativt antal för kreditfaktura', () => {
+    expect(parseQuantity('-1,5', true)).toBe(-1.5);
+    expect(parseQuantity('1', true)).toBeNull();
+    expect(parseQuantity('-1')).toBeNull();
   });
 });
 
