@@ -55,6 +55,9 @@ MVP:
 - **TypeScript strict** med `noUncheckedIndexedAccess`. Använd inte `any`. Använd `unknown` och smalna av typen i stället.
 - **Engelska identifierare** i koden (`calculateTotals`, `customer`). **Svenska** i användargränssnittet, kommentarer, commit-meddelanden, issues och PR:er.
 - **Belopp i öre som heltal.** Räkna aldrig med flyttal i kronor. Formatera bara vid visning (`formatSek`).
+  - **Avrundning:** till närmaste öre, där halva ören avrundas bort från noll (0,5 blir 1 och −0,5 blir −1). Detsamma gäller öresavrundningen till hela kronor.
+  - **Format:** `formatSek(123450)` ger `"1 234,50 kr"` och negativa belopp skrivs `"-0,25 kr"`. Tusentalsavgränsaren är ett vanligt mellanslag.
+- **Fel vid ogiltig indata:** kärnfunktioner som `addDays` och `createOcr` kastar fel vid ogiltig indata. Gränssnittet validerar indata innan det anropar dem.
 - **Datum som `YYYY-MM-DD`-strängar.** Använd hjälpfunktionerna i `src/core`.
 - **Inget ramverk.** Gränssnittet är vanlig TypeScript och DOM. Bygg element med `h()` från `src/ui/dom.ts`.
 - **Kärnan är ren.** `src/core` får inte röra DOM:en, förutom att `createLocalStore` tar emot ett `Storage`-objekt.
