@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { exportBackup, today, type Customer, type Store } from '../../core/index';
 import { getLastBackupDate, needsBackupReminder } from '../backup-reminder';
 import { createMemoryStore } from '../test-utils';
-import { backupFileName } from './backup-section';
+import { backupFileName, plural } from './backup-section';
 import { overviewView } from './overview';
 import { settingsView } from './settings';
 
@@ -41,6 +41,12 @@ describe('säkerhetskopiering i gränssnittet', () => {
     expect(backupFileName('2026-11-16')).toBe('fakturafix-backup-2026-11-16.json');
   });
 
+  it('böjer kund och faktura rätt', () => {
+    expect(plural(1, 'kund', 'kunder')).toBe('1 kund');
+    expect(plural(0, 'faktura', 'fakturor')).toBe('0 fakturor');
+    expect(plural(2, 'faktura', 'fakturor')).toBe('2 fakturor');
+  });
+
   it('Ladda ner skapar en fil och sparar datumet', () => {
     store.saveCustomer(customer);
     URL.createObjectURL = vi.fn(() => 'blob:test');
@@ -73,6 +79,7 @@ describe('säkerhetskopiering i gränssnittet', () => {
     choose(json);
     await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
     expect(String(confirm.mock.calls[0]?.[0])).toContain('ERSÄTTS');
+    expect(String(confirm.mock.calls[0]?.[0])).toContain('1 kund och 0 fakturor');
     expect(store.listCustomers()).toHaveLength(2);
 
     confirm.mockReturnValue(true);

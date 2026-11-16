@@ -4,6 +4,11 @@ import { markBackupTaken } from '../backup-reminder';
 import { h } from '../dom';
 import { errorMessage } from '../form';
 
+/** "1 kund", "2 kunder". */
+export function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
 export function backupFileName(date: string): string {
   return `fakturafix-backup-${date}.json`;
 }
@@ -50,7 +55,7 @@ export function backupSection(store: Store, onImported: () => void): HTMLElement
     try {
       const backup = parseBackup(await readFile(file));
       const question =
-        `Säkerhetskopian innehåller ${backup.customers.length} kunder och ${backup.invoices.length} fakturor. ` +
+        `Säkerhetskopian innehåller ${plural(backup.customers.length, 'kund', 'kunder')} och ${plural(backup.invoices.length, 'faktura', 'fakturor')}. ` +
         'Om du läser in den ERSÄTTS all data som finns i Fakturafix nu. Det går inte att ångra. Vill du fortsätta?';
       if (!window.confirm(question)) {
         say('Inläsningen avbröts. Inget har ändrats.', 'ok');
