@@ -8,6 +8,7 @@
 import {
   addDays,
   calculateTotals,
+  createCreditNote,
   createOcr,
   formatSek,
   isValidIsoDate,
@@ -23,6 +24,7 @@ import {
   type Store,
   type VatRate,
 } from '../../core/index';
+import { printInvoice } from '../../print/print';
 import { h } from '../dom';
 import {
   errorMessage,
@@ -58,11 +60,15 @@ export interface InvoiceInput {
 
 export type SaveMode = 'draft' | 'send';
 
-/** Tolkar antal som "2", "1,5" eller "1.5". Måste vara större än noll, annars null. */
-export function parseQuantity(value: string): number | null {
+/**
+ * Tolkar antal som "2", "1,5" eller "1.5". Måste vara större än noll, annars null.
+ * På en kreditfaktura (credit) ska antalet i stället vara mindre än noll, t.ex. "-1".
+ */
+export function parseQuantity(value: string, credit = false): number | null {
   const text = value.replace(/\s+/g, '');
-  if (!/^\d+([.,]\d+)?$/.test(text)) return null;
+  if (!/^-?\d+([.,]\d+)?$/.test(text)) return null;
   const quantity = Number(text.replace(',', '.'));
+  if (credit) return quantity < 0 ? quantity : null;
   return quantity > 0 ? quantity : null;
 }
 
@@ -82,8 +88,8 @@ function lineField(lineId: string, field: keyof Omit<LineInput, 'id'>): string {
 }
 
 /** Tolkar en rad. Ogiltigt antal eller pris ger null. */
-export function toInvoiceLine(line: LineInput): InvoiceLine | null {
-  const quantity = parseQuantity(line.quantity);
+export function toInvoiceLine(line: LineInput, credit = false): InvoiceLine | null {
+  const quantity = parseQuantity(line.quantity, credit);
   const unitPrice = parseSek(line.unitPrice);
   if (quantity === null || unitPrice === null) return null;
   return {
@@ -100,7 +106,7 @@ export function toInvoiceLine(line: LineInput): InvoiceLine | null {
  * Validerar formuläret. Ett utkast kräver kund, giltiga datum och tolkningsbara rader.
  * För att skicka krävs dessutom minst en rad och en beskrivning på varje rad.
  */
-export function validateInvoice(input: InvoiceInput, mode: SaveMode): FieldErrors {
+export function validateInvoice(input: InvoiceInput, mode: SaveMode, credit = false): FieldErrors {
   const errors: FieldErrors = {};
   if (!input.customerId) errors.customerId = 'Välj en kund.';
   if (!isValidIsoDate(input.issueDate)) errors.issueDate = 'Ange fakturadatum som ÅÅÅÅ-MM-DD.';
@@ -112,8 +118,10 @@ export function validateInvoice(input: InvoiceInput, mode: SaveMode): FieldError
     if (mode === 'send' && !line.description) {
       errors[lineField(line.id, 'description')] = 'Ange en beskrivning.';
     }
-    if (parseQuantity(line.quantity) === null) {
-      errors[lineField(line.id, 'quantity')] = 'Ange ett antal större än 0, t.ex. 1 eller 1,5.';
+    if (parseQuantity(line.quantity, credit) === null) {
+      errors[lineField(line.id, 'quantity')] = credit
+        ? 'Ange ett negativt antal, t.ex. -1 eller -1,5.'
+        : 'Ange ett antal större än 0, t.ex. 1 eller 1,5.';
     }
     if (parseSek(line.unitPrice) === null) {
       errors[lineField(line.id, 'unitPrice')] = 'Ange ett pris, t.ex. 1 250,00.';
@@ -167,6 +175,11 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
   }
 
   const issued = existing !== undefined && existing.status !== 'draft';
+  const isCreditNote = existing?.creditFor !== undefined;
+  const original = isCreditNote ? store.getInvoice(existing.creditFor ?? '') : undefined;
+  const allInvoices = existing ? store.listInvoices() : [];
+  const alreadyCredited = existing !== undefined && allInvoices.some((i) => i.creditFor === existing.id && i.status !== 'draft');
+  const canCredit = issued && !isCreditNote && !alreadyCredited;
   const settings = store.getSettings();
   const customers = store.listCustomers().sort(byName);
   const rerender = (id: string | undefined, next: Notice) => invoiceFormView(root, store, id, next);
@@ -176,7 +189,15 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     status.replaceChildren(...(text ? [h('p', { class: `notice notice-${kind}` }, text)] : []));
   };
 
-  const title = issued ? `Faktura ${existing.number}` : existing ? 'Redigera utkast' : 'Ny faktura';
+  const title = isCreditNote
+    ? issued
+      ? `Kreditfaktura ${existing.number}`
+      : 'Kreditfaktura (utkast)'
+    : issued
+      ? `Faktura ${existing.number}`
+      : existing
+        ? 'Redigera utkast'
+        : 'Ny faktura';
 
   if (customers.length === 0 && !existing) {
     root.replaceChildren(
@@ -296,12 +317,12 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
 
   /** Raderna som går att tolka, tomma rader borträknade. */
   const parsedLines = (input: InvoiceInput): InvoiceLine[] =>
-    input.lines.filter((l) => !isBlankLine(l)).flatMap((l) => toInvoiceLine(l) ?? []);
+    input.lines.filter((l) => !isBlankLine(l)).flatMap((l) => toInvoiceLine(l, isCreditNote) ?? []);
 
   function updateTotals(): void {
     const input = readInput();
     for (const line of input.lines) {
-      const parsed = toInvoiceLine(line);
+      const parsed = toInvoiceLine(line, isCreditNote);
       const out = form.querySelector(`[data-line-amount="${line.id}"]`);
       if (out) out.textContent = parsed ? formatSek(lineNet(parsed)) : '–';
     }
@@ -330,6 +351,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     ocr: mode === 'send' ? createOcr(number) : '',
     status: mode === 'send' ? 'sent' : 'draft',
     notes: optional(input.notes),
+    ...(existing?.creditFor !== undefined ? { creditFor: existing.creditFor } : {}),
     createdAt: existing?.createdAt ?? new Date().toISOString(),
   });
 
@@ -345,7 +367,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
 
   const save = (mode: SaveMode) => {
     const input = readInput();
-    if (showErrors(form, validateInvoice(input, mode))) {
+    if (showErrors(form, validateInvoice(input, mode, isCreditNote))) {
       announce('Fakturan är inte sparad. Rätta de markerade fälten.', 'error');
       return;
     }
@@ -358,8 +380,14 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
         announce('Lägg till minst en rad innan du skickar fakturan.', 'error');
         return;
       }
-      if (calculateTotals(parsedLines(input)).total < 0) {
-        announce('En faktura med negativt belopp kan inte skickas. Kreditfakturor stöds inte än.', 'error');
+      const total = calculateTotals(parsedLines(input)).total;
+      if (isCreditNote ? total > 0 : total < 0) {
+        announce(
+          isCreditNote
+            ? 'Totalen på en kreditfaktura får inte vara positiv. Rätta antalen så att summan blir negativ.'
+            : 'En faktura med negativt belopp kan inte skickas. Använd Kreditera på den ursprungliga fakturan.',
+          'error',
+        );
         return;
       }
       const question = 'Fakturan får nästa fakturanummer och kan sedan inte ändras eller raderas. Markera som skickad?';
@@ -404,8 +432,34 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     rerender(undefined, { text: 'Utkastet är raderat.', kind: 'ok' });
   };
 
+  const printNow = () => {
+    if (!existing) return;
+    const problem = printInvoice(store, existing.id);
+    if (problem) announce(problem, 'error');
+  };
+
+  const credit = () => {
+    if (!existing) return;
+    try {
+      const draft =
+        allInvoices.find((i) => i.creditFor === existing.id && i.status === 'draft') ??
+        createCreditNote(existing, today());
+      if (draft.status === 'draft' && !store.getInvoice(draft.id)) store.saveInvoice(draft);
+      setHash(`#/fakturor/${draft.id}`);
+      rerender(draft.id, {
+        text: 'Kreditfakturan är ett utkast. Justera raderna för en delkredit och markera den som skickad.',
+        kind: 'ok',
+      });
+    } catch (error) {
+      announce(errorMessage(error, 'Kreditfakturan kunde inte skapas. Försök igen.'), 'error');
+    }
+  };
+
   const actions = issued
-    ? []
+    ? [
+        h('button', { type: 'button', class: 'btn-primary', onclick: printNow }, 'Skriv ut'),
+        ...(canCredit ? [h('button', { type: 'button', class: 'btn-secondary', onclick: credit }, 'Kreditera')] : []),
+      ]
     : [
         h('button', { type: 'button', class: 'btn-secondary', onclick: () => save('draft') }, 'Spara utkast'),
         h('button', { type: 'button', class: 'btn-primary', onclick: () => save('send') }, 'Markera som skickad'),
@@ -455,6 +509,17 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
 
   for (const line of existing ? existing.lines.map(lineToInput) : [emptyLine()]) addLine(line);
 
+  const creditRef = isCreditNote
+    ? [
+        h(
+          'p',
+          { class: 'notice notice-info' },
+          original
+            ? `Avser faktura nr ${original.number}, daterad ${original.issueDate}. Antalen är negativa. Minska dem eller ta bort rader för en delkredit.`
+            : 'Ursprungsfakturan finns inte längre.',
+        ),
+      ]
+    : [];
   const intro = issued
     ? [
         h(
@@ -464,10 +529,10 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
         ),
       ]
     : existing
-      ? [h('p', { class: 'hint' }, 'Utkast får fakturanummer och OCR-nummer först när de markeras som skickade.')]
+      ? [...creditRef, h('p', { class: 'hint' }, 'Utkast får fakturanummer och OCR-nummer först när de markeras som skickade.')]
       : [];
 
-  root.replaceChildren(h('h1', {}, title), status, ...intro, h('section', { class: 'card' }, form));
+  root.replaceChildren(h('h1', {}, title), status, ...(issued ? creditRef : []), ...intro, h('section', { class: 'card' }, form));
   updateTotals();
   if (notice) announce(notice.text, notice.kind);
 }

@@ -1,5 +1,6 @@
 import type { Store } from './index';
 import { createOcr } from './ocr';
+import { calculateTotals } from './vat';
 import type { Customer, Invoice } from './types';
 import {
   FIRST_INVOICE_NUMBER,
@@ -184,6 +185,30 @@ function assertNextFreeNumber(invoice: Invoice, lastNumber: number): void {
   }
 }
 
+/** Regler för kreditfakturor och negativa belopp. `others` är övriga sparade fakturor. */
+function assertCreditRules(invoice: Invoice, others: Invoice[]): void {
+  const total = calculateTotals(invoice.lines).total;
+  if (invoice.creditFor === undefined) {
+    // Utkast får ha negativt belopp under redigering, men det går inte att utfärda.
+    if (total < 0 && invoice.status !== 'draft') throw new Error('En negativ total är bara tillåten på en kreditfaktura.');
+    return;
+  }
+  if (total > 0) throw new Error('En kreditfaktura måste ha en total som är 0 eller lägre.');
+  const original = others.find((other) => other.id === invoice.creditFor);
+  if (!original || original.status === 'draft') {
+    throw new Error('En kreditfaktura måste peka på en utfärdad faktura.');
+  }
+  if (original.creditFor !== undefined) {
+    throw new Error('En kreditfaktura kan inte själv krediteras.');
+  }
+  const alreadyCredited = others.some(
+    (other) => other.creditFor === invoice.creditFor && other.status !== 'draft',
+  );
+  if (invoice.status !== 'draft' && alreadyCredited) {
+    throw new Error(`Faktura ${original.number} har redan en utfärdad kreditfaktura.`);
+  }
+}
+
 /**
  * Skapar ett Store som sparar JSON i webbläsarens localStorage (eller i det
  * Storage-objekt som skickas in, t.ex. i tester). Varje anrop läser direkt
@@ -245,6 +270,7 @@ export function createLocalStore(storageArg?: Storage): Store {
     saveInvoice: (invoice) => {
       assertValidInvoiceNumber(invoice);
       assertPaidDateOnlyWhenPaid(invoice);
+      assertCreditRules(invoice, invoices().filter((other) => other.id !== invoice.id));
       // Läs den råa posten, inte bara de validerade, så att en utfärdad faktura
       // med trasig form inte kan kringgå låsningen.
       const stored = readRawList(storage, KEYS.invoices).find((value) => hasId(value, invoice.id));
