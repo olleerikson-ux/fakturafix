@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createOcr } from './ocr';
 import { createLocalStore } from './storage';
 import type { CompanySettings, Customer, Invoice } from './types';
 
@@ -18,7 +19,7 @@ function invoice(id: string, number: number): Invoice {
     issueDate: '2026-11-01',
     dueDate: '2026-12-01',
     lines: [],
-    ocr: '',
+    ocr: number > 0 ? createOcr(number) : '',
     status: 'draft',
     createdAt: '2026-11-01T10:00:00.000Z',
   };
@@ -128,8 +129,8 @@ describe('createLocalStore', () => {
     localStorage.setItem('fakturafix:lastInvoiceNumber', '1010');
     const store = createLocalStore(localStorage);
     expect(store.nextInvoiceNumber()).toBe(1011);
-    store.saveInvoice(invoice('f1', 1020));
-    expect(store.nextInvoiceNumber()).toBe(1021);
+    store.saveInvoice(invoice('f1', 1011));
+    expect(store.nextInvoiceNumber()).toBe(1012);
   });
 
   it('ignorerar ett trasigt högvattenmärke', () => {
@@ -141,8 +142,11 @@ describe('createLocalStore', () => {
     const store = createLocalStore(localStorage);
     expect(store.nextInvoiceNumber()).toBe(1001);
     store.saveInvoice(invoice('f1', 1001));
-    store.saveInvoice(invoice('f2', 1005));
-    store.saveInvoice(invoice('f3', 1002));
+    store.saveInvoice(invoice('f2', 1002));
+    expect(store.nextInvoiceNumber()).toBe(1003);
+    // Sparad data utan högvattenmärke: högsta sparade nummer + 1.
+    localStorage.setItem('fakturafix:invoices', JSON.stringify([invoice('a', 1001), invoice('b', 1005)]));
+    localStorage.removeItem('fakturafix:lastInvoiceNumber');
     expect(store.nextInvoiceNumber()).toBe(1006);
   });
 
@@ -372,5 +376,65 @@ describe('createLocalStore: trasiga sparade fakturor och betaldatum', () => {
     expect(() => store.saveInvoice({ ...invoice('f1', number), status, paidDate: '2026-12-01' })).toThrow(
       /Betaldatum/,
     );
+  });
+});
+
+describe('createLocalStore: unika fakturanummer', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  function issue(draft: Invoice, number: number): Invoice {
+    return { ...draft, number, ocr: createOcr(number), status: 'sent' };
+  }
+
+  it('två store-instanser kan inte dela ut samma nummer', () => {
+    const tabA = createLocalStore(localStorage);
+    const tabB = createLocalStore(localStorage);
+    const numberA = tabA.nextInvoiceNumber();
+    const numberB = tabB.nextInvoiceNumber();
+    expect(numberA).toBe(1001);
+    expect(numberB).toBe(1001);
+
+    tabA.saveInvoice(issue(invoice('a', 0), numberA));
+    expect(() => tabB.saveInvoice(issue(invoice('b', 0), numberB))).toThrow(/redan använt.*Försök igen/);
+
+    expect(tabB.listInvoices().map((i) => i.number)).toEqual([1001]);
+    tabB.saveInvoice(issue(invoice('b', 0), tabB.nextInvoiceNumber()));
+    expect(tabA.listInvoices().map((i) => i.number)).toEqual([1001, 1002]);
+  });
+
+  it('kräver nästa lediga nummer när ett utkast utfärdas', () => {
+    const store = createLocalStore(localStorage);
+    const draft = invoice('f1', 0);
+    store.saveInvoice(draft);
+    expect(() => store.saveInvoice(issue(draft, 1002))).toThrow(/nästa lediga är 1001/);
+    expect(store.getInvoice('f1')?.status).toBe('draft');
+    store.saveInvoice(issue(draft, 1001));
+    expect(store.getInvoice('f1')?.number).toBe(1001);
+  });
+
+  it('räknar med högvattenmärket när nästa lediga nummer bestäms', () => {
+    localStorage.setItem('fakturafix:lastInvoiceNumber', '1010');
+    const store = createLocalStore(localStorage);
+    expect(() => store.saveInvoice(issue(invoice('f1', 0), 1001))).toThrow(/redan använt/);
+    store.saveInvoice(issue(invoice('f1', 0), 1011));
+  });
+
+  it('kräver att OCR-numret hör till fakturanumret', () => {
+    const store = createLocalStore(localStorage);
+    const wrong = { ...issue(invoice('f1', 0), 1001), ocr: createOcr(1002) };
+    expect(() => store.saveInvoice(wrong)).toThrow(/OCR/);
+    expect(() => store.saveInvoice({ ...wrong, ocr: '' })).toThrow(/OCR/);
+    expect(store.listInvoices()).toEqual([]);
+  });
+
+  it('kontrollerar inte numret igen när en utfärdad faktura sparas om', () => {
+    const store = createLocalStore(localStorage);
+    const sent = issue(invoice('f1', 0), 1001);
+    store.saveInvoice(sent);
+    store.saveInvoice(issue(invoice('f2', 0), 1002));
+    store.saveInvoice({ ...sent, status: 'paid', paidDate: '2026-12-01' });
+    expect(store.getInvoice('f1')?.status).toBe('paid');
   });
 });
