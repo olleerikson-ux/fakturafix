@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vad är ett OCR-nummer och hur fungerar det? – Fakturafix</title>
+    <meta name="description" content="Så fungerar OCR-nummer på fakturor: vad det används till, hur kontrollsiffran räknas fram med Luhn och vad som händer om det saknas." />
+    <link rel="canonical" href="https://olleerikson-ux.github.io/fakturafix/guider/ocr-nummer/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="sv_SE" />
+    <meta property="og:title" content="Vad är ett OCR-nummer och hur fungerar det? – Fakturafix" />
+    <meta property="og:description" content="Så fungerar OCR-nummer på fakturor: vad det används till, hur kontrollsiffran räknas fram med Luhn och vad som händer om det saknas." />
+    <meta property="og:url" content="https://olleerikson-ux.github.io/fakturafix/guider/ocr-nummer/" />
+    <meta property="og:image" content="https://olleerikson-ux.github.io/fakturafix/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="/guider/guide.css" />
+  </head>
+  <body>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="../../"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="4" y="2" width="24" height="28" rx="4" fill="currentColor"/><path d="M10 11h12M10 16h12M10 21h7" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><span>Fakturafix</span></a>
+        <a class="link" href="../../app/">Öppna appen</a>
+      </div>
+    </header>
+    <main class="wrap">
+      <p class="crumbs"><a href="../../">Start</a> › <a href="../../guider/">Guider</a></p>
+      <h1>Vad är ett OCR-nummer och hur fungerar det?</h1>
+      <p class="lead">Ett OCR-nummer är en referens som gör att en betalning kan matchas mot rätt faktura utan manuellt arbete. Här förklarar vi vad det är, hur kontrollsiffran räknas fram och vad som händer om det saknas.</p>
+
+      <h2>Vad används OCR-numret till?</h2>
+      <p>OCR-numret är en referens som kunden anger när hen betalar via bankgiro. Tack vare numret kan betalningen prickas av automatiskt mot rätt faktura.</p>
+
+      <h2>Så är ett OCR-nummer uppbyggt</h2>
+      <p>OCR-numret består av siffror. Den sista siffran är en kontrollsiffra, som räknas fram med Luhn-algoritmen (modulus 10). Ofta finns också en längdsiffra.</p>
+      <p>Kontrollsiffran gör att de flesta skrivfel upptäcks. Skriver kunden fel när hen matar in numret kan banken därför säga ifrån direkt.</p>
+
+      <h2>Så fungerar Luhn-algoritmen</h2>
+      <p>Kort förklarat går det till så här:</p>
+      <ul>
+        <li>Varannan siffra från höger dubbleras.</li>
+        <li>Siffrorna summeras.</li>
+        <li>Kontrollsiffran blir det som fattas upp till närmaste tiotal.</li>
+      </ul>
+      <p>Du behöver inte räkna själv. Det är bankens och ditt fakturaprograms uppgift att göra det åt dig.</p>
+
+      <h2>Exempel från Fakturafix</h2>
+      <p>I Fakturafix ger fakturanummer 1001 OCR-numret <strong>100164</strong>. Där är 6 längdsiffran och 4 kontrollsiffran.</p>
+
+      <h2>Vad händer om OCR saknas eller är fel?</h2>
+      <p>Om kunden betalar utan OCR-nummer, eller med fel nummer, kommer pengarna oftast in ändå. Men betalningen måste då matchas mot fakturan manuellt, vilket tar tid och ökar risken för fel.</p>
+
+      <h2>Vad behöver du göra som säljare?</h2>
+      <p>Bankgirot avgör vilka OCR-regler som gäller för ett visst bankgironummer. Du kan därför behöva anmäla OCR-kontroll till din bank. Fråga banken vad som gäller för just ditt bankgiro.</p>
+      <p>Skriv sedan ut OCR-numret tydligt på fakturan, tillsammans med bankgironumret och förfallodatumet, så att kunden kan använda det när hen betalar.</p>
+
+      <div class="cta">
+        <p><strong>Prova Fakturafix gratis</strong></p>
+        <p>Fakturafix sköter moms, OCR och nummerserie automatiskt, så att du kan fokusera på ditt arbete.</p>
+        <a class="btn" href="../../app/">Kom igång gratis</a>
+      </div>
+      <p class="note">Guiden är allmän information och ersätter inte rådgivning från en redovisningskonsult eller Skatteverket. Senast uppdaterad: 2026-11-16.</p>
+    </main>
+    <footer>
+      <div class="wrap">
+        <a href="../../">Start</a><a href="../../guider/">Guider</a><a href="../../app/">Appen</a>
+      </div>
+    </footer>
+  </body>
+</html>
