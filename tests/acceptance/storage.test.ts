@@ -2,7 +2,7 @@
  * Acceptanstester: lagring via createLocalStore.
  * Varje test använder en egen Storage i minnet.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createLocalStore } from '../../src/core';
 import { customer, invoice, memoryStorage, settings, storageKeys } from './helpers';
 
@@ -40,7 +40,7 @@ describe('createLocalStore: kunder', () => {
 });
 
 describe('createLocalStore: fakturor', () => {
-  it('sparar, läser, uppdaterar och tar bort fakturor', () => {
+  it('sparar, läser och uppdaterar fakturor', () => {
     const store = createLocalStore(memoryStorage());
     const inv = invoice();
     store.saveInvoice(inv);
@@ -49,8 +49,13 @@ describe('createLocalStore: fakturor', () => {
     store.saveInvoice({ ...inv, status: 'paid', paidDate: '2026-03-20' });
     expect(store.listInvoices()).toHaveLength(1);
     expect(store.getInvoice(inv.id)?.status).toBe('paid');
+  });
 
-    store.deleteInvoice(inv.id);
+  it('tar bort ett utkast', () => {
+    const store = createLocalStore(memoryStorage());
+    const draft = invoice({ status: 'draft' });
+    store.saveInvoice(draft);
+    store.deleteInvoice(draft.id);
     expect(store.listInvoices()).toEqual([]);
   });
 });
@@ -170,5 +175,54 @@ describe('createLocalStore: standardlagring', () => {
     const store = createLocalStore();
     store.saveCustomer(customer());
     expect(storageKeys(window.localStorage).some((k) => k.startsWith('fakturafix:'))).toBe(true);
+  });
+});
+
+describe('createLocalStore: blockerad lagring (SecurityError)', () => {
+  const securityError = () => new DOMException('Åtkomst nekad', 'SecurityError');
+
+  function blockedStorage(): Storage {
+    return {
+      get length(): number {
+        throw securityError();
+      },
+      clear: () => {
+        throw securityError();
+      },
+      getItem: () => {
+        throw securityError();
+      },
+      key: () => {
+        throw securityError();
+      },
+      removeItem: () => {
+        throw securityError();
+      },
+      setItem: () => {
+        throw securityError();
+      },
+    };
+  }
+
+  it('kraschar inte när storage kastar SecurityError vid läsning', () => {
+    const store = createLocalStore(blockedStorage());
+    expect(store.listCustomers()).toEqual([]);
+    expect(store.listInvoices()).toEqual([]);
+    expect(store.getCustomer('kund-1')).toBeUndefined();
+    expect(store.getSettings()).toBeUndefined();
+    expect(store.nextInvoiceNumber()).toBe(1001);
+  });
+
+  it('kraschar inte när window.localStorage inte går att komma åt', () => {
+    const spy = vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+      throw securityError();
+    });
+    try {
+      const store = createLocalStore();
+      expect(store.listCustomers()).toEqual([]);
+      expect(store.getSettings()).toBeUndefined();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
