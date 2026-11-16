@@ -18,10 +18,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Typkontroll (src)
+      - name: Typkontroll
         run: npm run typecheck
-      - name: Typkontroll (tests)
-        run: npx tsc -p tests
       - name: Tester
         run: npm test
       - name: Bygge

@@ -109,3 +109,38 @@ describe('calculateTotals: öresavrundning', () => {
     expect(totals.total).toBe(0);
   });
 });
+
+describe('avrundning av halva ören (AGENTS.md: bort från noll)', () => {
+  it('radbelopp: 0,5 öre blir 1 öre', () => {
+    // 0,5 × 0,01 kr = 0,005 kr -> 0,01 kr
+    expect(lineNet(line(0.5, 1, 25))).toBe(1);
+  });
+
+  it('radbelopp: flyttalsfel avrundas inte åt fel håll', () => {
+    // 1,005 × 1,00 kr = 1,005 kr (flyttal: 100.49999999999999 öre) -> 1,01 kr
+    expect(lineNet(line(1.005, 100, 25))).toBe(101);
+  });
+
+  it('moms: halvt öre avrundas uppåt', () => {
+    // 0,10 kr × 25 % = 0,025 kr -> 0,03 kr
+    expect(calculateTotals([line(1, 10, 25)]).vat).toBe(3);
+  });
+
+  it('öresavrundning: exakt 50 öre avrundas uppåt', () => {
+    // 100,40 + 25,10 moms = 125,50 -> 126,00, avrundning +0,50
+    const totals = calculateTotals([line(1, 10040, 25)]);
+    expect(totals.vat).toBe(2510);
+    expect(totals.rounding).toBe(50);
+    expect(totals.total).toBe(12600);
+  });
+
+  it('negativa belopp (kreditrad): halva ören avrundas bort från noll', () => {
+    // -0,5 × 0,01 kr = -0,005 kr -> -0,01 kr
+    expect(lineNet(line(-0.5, 1, 25))).toBe(-1);
+    // -1 × 100,40 kr + -25,10 moms = -125,50 -> -126,00
+    const totals = calculateTotals([line(-1, 10040, 25)]);
+    expect(totals.vat).toBe(-2510);
+    expect(totals.total).toBe(-12600);
+    expect(totals.rounding).toBe(-50);
+  });
+});

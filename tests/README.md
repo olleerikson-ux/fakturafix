@@ -12,8 +12,4 @@ Enhetstester ligger bredvid koden i `src/`.
 Testerna bygger på specifikationen i `AGENTS.md` och issue #3, inte på någon implementation.
 Förväntade värden är uträknade för hand. All testdata är påhittad.
 
-Rot-`tsconfig.json` inkluderar bara `src/`, så testerna typkontrolleras separat:
-
-```bash
-npx tsc -p tests
-```
+Testerna typkontrolleras av `npm run typecheck`.

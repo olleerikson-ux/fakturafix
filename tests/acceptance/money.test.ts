@@ -1,7 +1,7 @@
 /**
  * Acceptanstester: formatSek och parseSek.
- * Tusentalsavgränsaren får vara vanligt eller hårt mellanslag (issue #3),
- * så vi normaliserar mellanslag innan vi jämför.
+ * AGENTS.md anger vanligt mellanslag som tusentalsavgränsare. De flesta tester
+ * normaliserar ändå mellanslag, och ett separat test kontrollerar det exakta formatet.
  */
 import { describe, expect, it } from 'vitest';
 import { formatSek, parseSek } from '../../src/core';
@@ -29,6 +29,11 @@ describe('formatSek', () => {
   it('visar negativa belopp (t.ex. öresavrundning) med minustecken', () => {
     expect(normalize(formatSek(-25))).toBe('-0,25 kr');
     expect(normalize(formatSek(-123450))).toBe('-1 234,50 kr');
+  });
+
+  it('använder vanligt mellanslag och bindestreck som minus (AGENTS.md)', () => {
+    expect(formatSek(123456789)).toBe('1 234 567,89 kr');
+    expect(formatSek(-25)).toBe('-0,25 kr');
   });
 
   it('är konsekvent med mellanslagstyp', () => {
