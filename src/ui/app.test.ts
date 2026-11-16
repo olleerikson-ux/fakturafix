@@ -27,4 +27,11 @@ describe('startApp', () => {
     startApp(root, createMemoryStore());
     expect(root.querySelector('main h1')?.textContent).toBe('Inställningar');
   });
+
+  it('visar fakturaformuläret på #/fakturor/<id>', () => {
+    location.hash = '#/fakturor/finns-inte';
+    const root = document.createElement('div');
+    startApp(root, createMemoryStore());
+    expect(root.querySelector('main')?.textContent).toContain('Fakturan finns inte');
+  });
 });

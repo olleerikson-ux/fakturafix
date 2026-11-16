@@ -1,11 +1,12 @@
 /**
- * Appens skal: navigering med hash-routing (#/kunder, #/fakturor, ...).
+ * Appens skal: navigering med hash-routing (#/kunder, #/fakturor/ny, #/fakturor/<id>, ...).
  * Varje vy är en funktion som får ett element att rita i.
  * Utvecklare 2 lägger till vyer i src/ui/views/ och registrerar dem här.
  */
 import type { Store } from '../core/index';
 import { h } from './dom';
 import { customersView } from './views/customers';
+import { invoiceFormView } from './views/invoice-form';
 import { settingsView } from './views/settings';
 
 export type View = (root: HTMLElement, store: Store) => void;
@@ -24,7 +25,7 @@ const placeholder =
 
 const routes: Route[] = [
   { path: '/oversikt', label: 'Översikt', view: placeholder('Översikt') },
-  { path: '/fakturor/ny', label: 'Ny faktura', view: placeholder('Ny faktura') },
+  { path: '/fakturor/ny', label: 'Ny faktura', view: (root, store) => invoiceFormView(root, store) },
   { path: '/kunder', label: 'Kunder', view: customersView },
   { path: '/installningar', label: 'Inställningar', view: settingsView },
 ];
@@ -41,11 +42,15 @@ export function startApp(root: HTMLElement, store: Store): void {
 
   const render = () => {
     const path = location.hash.replace(/^#/, '') || '/oversikt';
-    const route = routes.find((r) => r.path === path) ?? routes[0]!;
+    const invoiceId = /^\/fakturor\/([\w-]+)$/.exec(path)?.[1];
+    const route = routes.find((r) => r.path === path);
+    const activePath = route?.path ?? (invoiceId ? '' : routes[0]!.path);
     for (const a of nav.querySelectorAll('a')) {
-      a.classList.toggle('active', a.getAttribute('href') === `#${route.path}`);
+      a.classList.toggle('active', a.getAttribute('href') === `#${activePath}`);
     }
-    route.view(main, store);
+    if (route) route.view(main, store);
+    else if (invoiceId) invoiceFormView(main, store, invoiceId);
+    else routes[0]!.view(main, store);
   };
   window.addEventListener('hashchange', render);
   render();
