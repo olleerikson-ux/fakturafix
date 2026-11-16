@@ -68,7 +68,7 @@ describe('createLocalStore', () => {
     expect(store.listInvoices()).toHaveLength(1);
     expect(store.getInvoice('f1')?.status).toBe('sent');
 
-    store.saveInvoice(invoice('f2', 1002));
+    store.saveInvoice(invoice('f2', 0));
     store.deleteInvoice('f2');
     expect(store.getInvoice('f2')).toBeUndefined();
     expect(() => store.deleteInvoice('saknas')).not.toThrow();
@@ -81,14 +81,47 @@ describe('createLocalStore', () => {
     expect(store.getInvoice('f1')).toBeDefined();
   });
 
-  it('återanvänder aldrig ett fakturanummer, även när det högsta utkastet raderas', () => {
+  it('återanvänder aldrig ett fakturanummer och utkast med nummer 0 påverkar inte serien', () => {
     const store = createLocalStore(localStorage);
     store.saveInvoice({ ...invoice('f1', 1001), status: 'sent' });
-    store.saveInvoice(invoice('f2', 1002));
-    store.deleteInvoice('f2');
-    expect(store.nextInvoiceNumber()).toBe(1003);
-    expect(localStorage.getItem('fakturafix:lastInvoiceNumber')).toBe('1002');
-    expect(createLocalStore(localStorage).nextInvoiceNumber()).toBe(1003);
+    store.saveInvoice(invoice('utkast', 0));
+    store.deleteInvoice('utkast');
+    expect(store.nextInvoiceNumber()).toBe(1002);
+    expect(localStorage.getItem('fakturafix:lastInvoiceNumber')).toBe('1001');
+    expect(createLocalStore(localStorage).nextInvoiceNumber()).toBe(1002);
+  });
+
+  it('vägrar göra om en utfärdad faktura till utkast', () => {
+    const store = createLocalStore(localStorage);
+    const sent: Invoice = { ...invoice('f1', 1001), ocr: '100164', status: 'sent' };
+    store.saveInvoice(sent);
+    expect(() => store.saveInvoice({ ...sent, status: 'draft' })).toThrow(/utkast/);
+    expect(store.getInvoice('f1')?.status).toBe('sent');
+  });
+
+  it('vägrar byta nummer eller OCR på en utfärdad faktura', () => {
+    const store = createLocalStore(localStorage);
+    const sent: Invoice = { ...invoice('f1', 1001), ocr: '100164', status: 'sent' };
+    store.saveInvoice(sent);
+    expect(() => store.saveInvoice({ ...sent, number: 1002 })).toThrow(/nummer/);
+    expect(() => store.saveInvoice({ ...sent, ocr: '100260' })).toThrow(/OCR/);
+    expect(store.getInvoice('f1')).toEqual(sent);
+  });
+
+  it('tillåter att en skickad faktura markeras som betald och att betaldatum ändras', () => {
+    const store = createLocalStore(localStorage);
+    const sent: Invoice = { ...invoice('f1', 1001), ocr: '100164', status: 'sent' };
+    store.saveInvoice(sent);
+    store.saveInvoice({ ...sent, status: 'paid', paidDate: '2026-12-01' });
+    store.saveInvoice({ ...sent, status: 'paid', paidDate: '2026-12-02' });
+    expect(store.getInvoice('f1')?.paidDate).toBe('2026-12-02');
+  });
+
+  it('tillåter att ett utkast utfärdas med nummer och OCR', () => {
+    const store = createLocalStore(localStorage);
+    store.saveInvoice(invoice('f1', 0));
+    store.saveInvoice({ ...invoice('f1', 1001), ocr: '100164', status: 'sent' });
+    expect(store.getInvoice('f1')?.number).toBe(1001);
   });
 
   it('använder det högsta av högvattenmärket och sparade nummer', () => {

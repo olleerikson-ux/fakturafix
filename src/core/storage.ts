@@ -93,6 +93,22 @@ function ensureVersion(storage: MaybeStorage): void {
 }
 
 /**
+ * En utfärdad faktura (status skild från "draft") får inte göras om till ett
+ * utkast och får inte byta nummer eller OCR. Annars skulle den kunna raderas
+ * eller ge luckor och dubbletter i löpnummerserien. Övergången från "sent"
+ * till "paid" och ändringar av t.ex. paidDate är tillåtna.
+ */
+function assertIssuedInvoiceUnchanged(existing: Invoice, updated: Invoice): void {
+  if (existing.status === 'draft') return;
+  if (updated.status === 'draft') {
+    throw new Error(`Faktura ${existing.number} är utfärdad och kan inte göras om till ett utkast.`);
+  }
+  if (updated.number !== existing.number || updated.ocr !== existing.ocr) {
+    throw new Error(`Faktura ${existing.number} är utfärdad och kan inte byta nummer eller OCR-nummer.`);
+  }
+}
+
+/**
  * Skapar ett Store som sparar JSON i webbläsarens localStorage (eller i det
  * Storage-objekt som skickas in, t.ex. i tester). Varje anrop läser direkt
  * från lagringen, så flera Store-instanser ser alltid samma data.
@@ -100,9 +116,10 @@ function ensureVersion(storage: MaybeStorage): void {
  * Om lagringen inte går att komma åt behandlas den som tom vid läsning och
  * skrivningar kastar fel.
  *
- * Fakturanumren bildar en obruten serie som aldrig återanvänds: det högsta
- * utdelade numret sparas som ett högvattenmärke, och utfärdade fakturor
- * (status skild från "draft") kan inte raderas.
+ * Fakturanumren bildar en obruten serie som aldrig återanvänds. Utkast har
+ * number 0 och påverkar inte serien. Det högsta utdelade numret sparas som
+ * ett högvattenmärke. Utfärdade fakturor (status skild från "draft") kan inte
+ * raderas, göras om till utkast eller byta nummer eller OCR.
  */
 export function createLocalStore(storageArg?: Storage): Store {
   const storage = resolveStorage(storageArg);
@@ -129,6 +146,8 @@ export function createLocalStore(storageArg?: Storage): Store {
     listInvoices: invoices,
     getInvoice: (id) => invoices().find((invoice) => invoice.id === id),
     saveInvoice: (invoice) => {
+      const existing = invoices().find((stored) => stored.id === invoice.id);
+      if (existing) assertIssuedInvoiceUnchanged(existing, invoice);
       const highest = Math.max(lastInvoiceNumber(), invoice.number);
       writeJson(storage, KEYS.invoices, upsert(invoices(), invoice));
       writeJson(storage, KEYS.lastInvoiceNumber, highest);
