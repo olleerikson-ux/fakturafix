@@ -37,7 +37,8 @@ describe('computeKpis', () => {
 describe('statusLabel', () => {
   it('faller tillbaka på rått värde för okända statusar', () => {
     expect(statusLabel('overdue')).toBe('Förfallen');
-    expect(statusLabel('credited')).toBe('credited');
+    expect(statusLabel('credited')).toBe('Krediterad');
+    expect(statusLabel('okand-status')).toBe('okand-status');
   });
 });
 

@@ -11,6 +11,8 @@ const STATUS_LABELS: Record<string, string> = {
   unpaid: 'Obetald',
   overdue: 'Förfallen',
   paid: 'Betald',
+  credited: 'Krediterad',
+  'credit-note': 'Kreditfaktura',
 };
 
 const FILTERS: { value: string; label: string }[] = [
@@ -19,6 +21,8 @@ const FILTERS: { value: string; label: string }[] = [
   { value: 'unpaid', label: 'Obetalda' },
   { value: 'overdue', label: 'Förfallna' },
   { value: 'paid', label: 'Betalda' },
+  { value: 'credited', label: 'Krediterade' },
+  { value: 'credit-note', label: 'Kreditfakturor' },
 ];
 
 /** Statusen som text. Okända värden (t.ex. från nyare kärnversioner) visas som de är. */
@@ -90,7 +94,7 @@ export function overviewView(root: HTMLElement, store: Store): void {
       return h(
         'tr',
         {},
-        h('td', {}, invoice.number ? String(invoice.number) : '–'),
+        h('td', { class: 'num' }, invoice.number ? String(invoice.number) : '–'),
         h('td', {}, name),
         h('td', {}, invoice.issueDate),
         h('td', {}, invoice.dueDate),
@@ -118,7 +122,7 @@ export function overviewView(root: HTMLElement, store: Store): void {
 
     const list =
       invoices.length === 0
-        ? h('p', { class: 'empty' }, 'Du har inga fakturor än. ', h('a', { href: '#/fakturor/ny' }, 'Skapa din första faktura'), '.')
+        ? h('div', { class: 'empty' }, h('p', {}, 'Du har inga fakturor än.'), h('a', { class: 'btn-primary', href: '#/fakturor/ny' }, 'Skapa din första faktura'))
         : shown.length === 0
           ? h('p', { class: 'empty' }, 'Inga fakturor matchar filtret.')
           : h(
@@ -130,15 +134,31 @@ export function overviewView(root: HTMLElement, store: Store): void {
                 h(
                   'tr',
                   {},
-                  ...['Nr', 'Kund', 'Datum', 'Förfaller', 'Belopp', 'Status'].map((t) => h('th', { scope: 'col' }, t)),
+                  ...['Nr', 'Kund', 'Datum', 'Förfaller', 'Belopp', 'Status'].map((t) => h('th', { scope: 'col', class: t === 'Nr' || t === 'Belopp' ? 'num' : '' }, t)),
                   h('th', { scope: 'col' }, h('span', { class: 'visually-hidden' }, 'Åtgärder')),
                 ),
               ),
               h('tbody', {}, ...rows),
             );
 
+    const welcome = store.getSettings()
+      ? ''
+      : h(
+          'section',
+          { class: 'card welcome', 'aria-labelledby': 'welcome-title' },
+          h('h2', { id: 'welcome-title' }, 'Välkommen till Fakturafix'),
+          h('p', {}, 'Kom igång på tre steg:'),
+          h(
+            'ol',
+            {},
+            h('li', {}, h('a', { href: '#/installningar' }, 'Fyll i ditt företag')),
+            h('li', {}, h('a', { href: '#/kunder' }, 'Lägg till en kund')),
+            h('li', {}, h('a', { href: '#/fakturor/ny' }, 'Skapa en faktura')),
+          ),
+        );
     root.replaceChildren(
       h('h1', {}, 'Översikt'),
+      welcome,
       h(
         'div',
         { class: 'kpis' },

@@ -1,49 +1,156 @@
+/* ---- Tokens ---- */
 :root {
-  --bg: #f7f7f5;
+  --bg: #f7f8fa;
   --surface: #ffffff;
-  --text: #1d1d1f;
-  --muted: #6b6b70;
-  --accent: #1f6feb;
-  --border: #e3e3e0;
-  --danger: #c62828;
-  --ok: #2e7d32;
+  --text: #1b1f24;
+  --muted: #5a6370;
+  --accent: #1d5fd1;
+  --on-accent: #ffffff;
+  --border: #dde1e6;
+  --danger: #b42318;
+  --success: #1e7a3a;
+  --warning: #8a5a00;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --radius-1: 4px;
+  --radius-2: 8px;
+  --radius-3: 12px;
+  --shadow-1: 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-2: 0 4px 12px rgb(0 0 0 / 0.08);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   color: var(--text);
   background: var(--bg);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14181f;
+    --surface: #1e242d;
+    --text: #e6e9ee;
+    --muted: #a3acb9;
+    --accent: #7aaeff;
+    --on-accent: #0b1220;
+    --border: #353d48;
+    --danger: #ff8a80;
+    --success: #7bd88f;
+    --warning: #ffd27a;
+    --shadow-1: 0 1px 3px rgb(0 0 0 / 0.4);
+    --shadow-2: 0 4px 12px rgb(0 0 0 / 0.4);
+  }
 }
 
 body {
   margin: 0;
+  background: var(--bg);
 }
 
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: 1.75rem;
+  margin: 0 0 var(--space-5);
+}
+
+a {
+  color: var(--accent);
+}
+
+/* ---- Sidhuvud och navigering ---- */
 .nav {
   display: flex;
-  gap: 1rem;
   align-items: center;
-  padding: 0.75rem 1rem;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
-}
-
-.nav a {
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.nav a.active {
-  color: var(--accent);
-  font-weight: 600;
+  box-shadow: var(--shadow-1);
+  position: relative;
 }
 
 .brand {
-  margin-right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.brand svg {
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+}
+
+.nav-links {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+}
+
+.nav-links a:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.nav-links a.active {
+  color: var(--accent);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.nav-toggle {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .nav-toggle {
+    display: inline-block;
+  }
+
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: var(--space-2) var(--space-4) var(--space-4);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-2);
+    z-index: 10;
+  }
+
+  .nav.open .nav-links {
+    display: flex;
+  }
 }
 
 .main {
   max-width: 960px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--space-5) var(--space-4) var(--space-7);
 }
 
 /* ---- Vyer och formulär ---- */
@@ -51,9 +158,10 @@ body {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  border-radius: var(--radius-3);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-1);
 }
 
 .card h2 {
@@ -90,7 +198,7 @@ body {
   font: inherit;
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-2);
   background: var(--surface);
   color: var(--text);
   min-width: 0;
@@ -131,7 +239,7 @@ body {
 button {
   font: inherit;
   padding: 0.5rem 0.9rem;
-  border-radius: 6px;
+  border-radius: var(--radius-2);
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
@@ -141,7 +249,24 @@ button {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.btn-primary,
+a.btn-primary {
+  display: inline-block;
+  text-decoration: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-2);
 }
 
 .btn-danger {
@@ -150,30 +275,38 @@ button {
 
 a:focus-visible,
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 .notice {
   padding: 0.6rem 0.8rem;
-  border-radius: 6px;
+  border-radius: var(--radius-2);
 }
 
 .notice-ok {
-  background: #e8f5e9;
-  color: var(--ok);
-  border: 1px solid #c8e6c9;
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 35%, var(--surface));
 }
 
 .notice-error {
-  background: #fdecea;
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
   color: var(--danger);
-  border: 1px solid #f5c6c4;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--surface));
 }
 
 .empty {
   color: var(--muted);
+  text-align: center;
+  padding: var(--space-5) var(--space-4);
+}
+
+.empty .btn-primary {
+  margin-top: var(--space-3);
 }
 
 .table {
@@ -237,9 +370,9 @@ input:focus-visible {
 /* ---- Fakturaformulär ---- */
 
 .notice-info {
-  background: #e8f0fe;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   color: var(--text);
-  border: 1px solid #c6d8fb;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--surface));
 }
 
 .form .invoice-content,
@@ -256,7 +389,7 @@ input:focus-visible {
   font: inherit;
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-2);
   background: var(--surface);
   color: var(--text);
   min-width: 0;
@@ -334,13 +467,95 @@ button:disabled,
 }
 
 /* ---- Översikt ---- */
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.25rem; }
-.kpi strong { font-size: 1.4rem; }
-.kpi-label { color: var(--muted); font-size: 0.85rem; }
-.kpi-danger strong { color: var(--danger); }
-.filter { margin-bottom: 0.75rem; }
-.num { text-align: right; white-space: nowrap; }
-.badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.8rem; background: var(--bg); border: 1px solid var(--border); }
-.badge-overdue { color: var(--danger); border-color: var(--danger); }
-.badge-paid { color: var(--ok); border-color: var(--ok); }
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.kpi strong {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-label {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.kpi-danger strong {
+  color: var(--danger);
+}
+
+.filter {
+  margin-bottom: var(--space-4);
+}
+
+.num {
+  text-align: right !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  --tone: var(--muted);
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 12%, var(--surface));
+}
+
+.badge-unpaid {
+  --tone: var(--warning);
+}
+
+.badge-overdue {
+  --tone: var(--danger);
+}
+
+.badge-paid {
+  --tone: var(--success);
+}
+
+.badge-credited,
+.badge-credit-note {
+  --tone: var(--accent);
+}
+
+/* ---- Välkomstruta ---- */
+.welcome ol {
+  margin: var(--space-3) 0 var(--space-4);
+  padding-left: var(--space-5);
+}
+
+.welcome li {
+  margin-bottom: var(--space-2);
+}
+
+.brand {
+  text-decoration: none;
+}
+
+select {
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--text);
+}
