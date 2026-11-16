@@ -69,7 +69,7 @@ describe('createLocalStore: fakturanummer', () => {
     const store = createLocalStore(memoryStorage());
     for (let i = 0; i < 3; i++) {
       const number = store.nextInvoiceNumber();
-      store.saveInvoice(invoice({ id: `f-${number}`, number }));
+      store.saveInvoice(invoice({ id: `f-${number}`, number, ocr: createOcr(number) }));
     }
     expect(store.listInvoices().map((i) => i.number).sort()).toEqual([1001, 1002, 1003]);
     expect(store.nextInvoiceNumber()).toBe(1004);
