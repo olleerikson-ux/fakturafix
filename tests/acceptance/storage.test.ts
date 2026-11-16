@@ -3,7 +3,7 @@
  * Varje test använder en egen Storage i minnet.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createLocalStore, createOcr } from '../../src/core';
+import { createLocalStore } from '../../src/core';
 import { customer, invoice, memoryStorage, settings, storageKeys } from './helpers';
 
 describe('createLocalStore: kunder', () => {
@@ -69,7 +69,7 @@ describe('createLocalStore: fakturanummer', () => {
     const store = createLocalStore(memoryStorage());
     for (let i = 0; i < 3; i++) {
       const number = store.nextInvoiceNumber();
-      store.saveInvoice(invoice({ id: `f-${number}`, number, ocr: createOcr(number) }));
+      store.saveInvoice(invoice({ id: `f-${number}`, number }));
     }
     expect(store.listInvoices().map((i) => i.number).sort()).toEqual([1001, 1002, 1003]);
     expect(store.nextInvoiceNumber()).toBe(1004);
@@ -77,8 +77,8 @@ describe('createLocalStore: fakturanummer', () => {
 
   it('ger högsta numret plus 1', () => {
     const store = createLocalStore(memoryStorage());
-    store.saveInvoice(invoice({ id: 'x', number: 1001, ocr: '100164' }));
-    store.saveInvoice(invoice({ id: 'y', number: 1002, ocr: createOcr(1002) }));
+    store.saveInvoice(invoice({ id: 'x', number: 1001 }));
+    store.saveInvoice(invoice({ id: 'y', number: 1002 }));
     expect(store.nextInvoiceNumber()).toBe(1003);
   });
 });

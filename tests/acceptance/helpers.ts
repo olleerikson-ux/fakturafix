@@ -2,7 +2,7 @@
  * Hjälpfunktioner och påhittad testdata för acceptanstesterna.
  * All data här är fiktiv (AGENTS.md regel 7).
  */
-import type { CompanySettings, Customer, Invoice, InvoiceLine, VatRate } from '../../src/core';
+import { createOcr, type CompanySettings, type Customer, type Invoice, type InvoiceLine, type VatRate } from '../../src/core';
 
 /** Enkel Storage i minnet så att varje test får en egen, tom lagring. */
 export function memoryStorage(): Storage {
@@ -52,17 +52,22 @@ export function customer(overrides: Partial<Customer> = {}): Customer {
   };
 }
 
+/**
+ * En faktura med giltiga standardvärden. Om ocr inte anges räknas den fram
+ * ur numret (createOcr), och ett utkast med nummer 0 får ocr ''.
+ */
 export function invoice(overrides: Partial<Invoice> = {}): Invoice {
+  const number = overrides.number ?? 1001;
   return {
     id: 'faktura-1',
-    number: 1001,
+    number,
     customerId: 'kund-1',
     issueDate: '2026-03-01',
     dueDate: '2026-03-31',
     lines: [
       { id: 'rad-standard', description: 'Konsulttimme', quantity: 1, unit: 'tim', unitPrice: 100000, vatRate: 25 },
     ],
-    ocr: '100164',
+    ocr: number > 0 ? createOcr(number) : '',
     status: 'sent',
     createdAt: '2026-03-01T10:00:00.000Z',
     ...overrides,
