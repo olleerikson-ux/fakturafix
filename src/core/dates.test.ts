@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { addDays, displayStatus, today } from './dates';
+import { addDays, displayStatus, isValidIsoDate, today } from './dates';
 import type { Invoice, InvoiceStatus } from './types';
 
 describe('addDays', () => {
@@ -33,6 +33,19 @@ describe('addDays', () => {
     expect(() => addDays('2026-02-30', 1)).toThrow();
     expect(() => addDays('20260101', 1)).toThrow();
   });
+});
+
+describe('isValidIsoDate', () => {
+  it.each(['2026-01-05', '2028-02-29', '2026-12-31', '0001-01-01'])('godkänner %s', (date) => {
+    expect(isValidIsoDate(date)).toBe(true);
+  });
+
+  it.each(['', '2027-02-29', '2026-02-30', '2026-13-01', '2026-00-10', '2026-1-5', '20260105', '2026-01-05T00:00', ' 2026-01-05'])(
+    'underkänner %j',
+    (date) => {
+      expect(isValidIsoDate(date)).toBe(false);
+    },
+  );
 });
 
 describe('today', () => {
@@ -77,5 +90,10 @@ describe('displayStatus', () => {
 
   it('ger overdue för skickad faktura efter förfallodagen', () => {
     expect(displayStatus(invoice('sent'), '2026-12-01')).toBe('overdue');
+  });
+
+  it('ger unpaid för en okänd status från trasig lagrad data', () => {
+    const broken = { ...invoice('sent'), status: 'arkiverad' } as unknown as Invoice;
+    expect(displayStatus(broken, '2027-01-01')).toBe('unpaid');
   });
 });

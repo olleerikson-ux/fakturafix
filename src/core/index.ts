@@ -18,7 +18,7 @@ export { lineNet, calculateTotals } from './vat';
 export { createOcr, isValidOcr } from './ocr';
 
 // ---- Datum och status ----
-export { addDays, today, displayStatus } from './dates';
+export { addDays, today, displayStatus, isValidIsoDate } from './dates';
 
 // ---- Lagring ----
 export { createLocalStore } from './storage';

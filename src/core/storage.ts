@@ -1,5 +1,14 @@
 import type { Store } from './index';
-import type { CompanySettings, Customer, Invoice } from './types';
+import type { Customer, Invoice } from './types';
+import {
+  FIRST_INVOICE_NUMBER,
+  deepEqual,
+  isCompanySettings,
+  isCustomer,
+  isInvoice,
+  isRecord,
+  isValidInvoiceNumber,
+} from './validation';
 
 const PREFIX = 'fakturafix:';
 const KEYS = {
@@ -10,19 +19,13 @@ const KEYS = {
   lastInvoiceNumber: `${PREFIX}lastInvoiceNumber`,
 } as const;
 const STORAGE_VERSION = 1;
-const FIRST_INVOICE_NUMBER = 1001;
 
 interface HasId {
   id: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function hasId(value: unknown): value is HasId {
-  return isRecord(value) && typeof value.id === 'string';
-}
+/** Fält som får ändras på en utfärdad faktura. Allt annat är låst. */
+const EDITABLE_AFTER_ISSUE: readonly string[] = ['status', 'paidDate', 'notes'];
 
 /** Lagringen, eller undefined om den inte går att komma åt (t.ex. SecurityError). */
 type MaybeStorage = Storage | undefined;
@@ -52,14 +55,14 @@ function readJson(storage: MaybeStorage, key: string): unknown {
   }
 }
 
-/**
- * Läser en lista med poster. Allt som inte är en array behandlas som tom
- * data, och element utan sträng-id hoppas över.
- */
-function readList<T extends HasId>(storage: MaybeStorage, key: string): T[] {
+/** Läser en lista som den är sparad. Allt som inte är en array blir tomt. */
+function readRawList(storage: MaybeStorage, key: string): unknown[] {
   const value = readJson(storage, key);
-  if (!Array.isArray(value)) return [];
-  return value.filter(hasId) as unknown as T[];
+  return Array.isArray(value) ? value : [];
+}
+
+function hasId(value: unknown, id: string): boolean {
+  return isRecord(value) && value.id === id;
 }
 
 /** Läser ett heltal. Allt annat ger undefined. */
@@ -76,8 +79,12 @@ function writeJson(storage: MaybeStorage, key: string, value: unknown): void {
   storage.setItem(key, JSON.stringify(value));
 }
 
-function upsert<T extends HasId>(items: T[], item: T): T[] {
-  const index = items.findIndex((existing) => existing.id === item.id);
+/**
+ * Lägger till eller ersätter en post i den sparade listan. Poster som inte
+ * klarar valideringen lämnas orörda, så att trasig data inte raderas tyst.
+ */
+function upsert(items: unknown[], item: HasId): unknown[] {
+  const index = items.findIndex((existing) => hasId(existing, item.id));
   if (index === -1) return [...items, item];
   return items.map((existing, i) => (i === index ? item : existing));
 }
@@ -92,20 +99,62 @@ function ensureVersion(storage: MaybeStorage): void {
   }
 }
 
+function assertValidInvoiceNumber(invoice: Invoice): void {
+  if (!isValidInvoiceNumber(invoice.number)) {
+    throw new Error(
+      `Ogiltigt fakturanummer: ${invoice.number}. Utkast har 0 och utfärdade fakturor ett heltal från ${FIRST_INVOICE_NUMBER}.`,
+    );
+  }
+}
+
 /**
- * En utfärdad faktura (status skild från "draft") får inte göras om till ett
- * utkast och får inte byta nummer eller OCR. Annars skulle den kunna raderas
- * eller ge luckor och dubbletter i löpnummerserien. Övergången från "sent"
- * till "paid" och ändringar av t.ex. paidDate är tillåtna.
+ * En utfärdad faktura (status skild från "draft") är låst. Bara status (från
+ * "sent" till "paid"), paidDate och notes får ändras. Den får alltså inte
+ * göras om till ett utkast, byta nummer eller OCR, eller få andra rader,
+ * kund eller datum.
  */
 function assertIssuedInvoiceUnchanged(existing: Invoice, updated: Invoice): void {
   if (existing.status === 'draft') return;
+  const name = `Faktura ${existing.number} är utfärdad`;
   if (updated.status === 'draft') {
-    throw new Error(`Faktura ${existing.number} är utfärdad och kan inte göras om till ett utkast.`);
+    throw new Error(`${name} och kan inte göras om till ett utkast.`);
+  }
+  if (existing.status === 'paid' && updated.status !== 'paid') {
+    throw new Error(`${name} och betald. Statusen kan inte ändras tillbaka.`);
   }
   if (updated.number !== existing.number || updated.ocr !== existing.ocr) {
-    throw new Error(`Faktura ${existing.number} är utfärdad och kan inte byta nummer eller OCR-nummer.`);
+    throw new Error(`${name} och kan inte byta nummer eller OCR-nummer.`);
   }
+  const before: Record<string, unknown> = { ...existing };
+  const after: Record<string, unknown> = { ...updated };
+  const locked = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+    (key) => !EDITABLE_AFTER_ISSUE.includes(key) && !deepEqual(before[key], after[key]),
+  );
+  if (locked.length > 0) {
+    throw new Error(`${name} och låst. Följande kan inte ändras: ${locked.join(', ')}.`);
+  }
+}
+
+function assertPaidDateOnlyWhenPaid(invoice: Invoice): void {
+  if (invoice.paidDate !== undefined && invoice.status !== 'paid') {
+    throw new Error('Betaldatum kan bara anges för en betald faktura.');
+  }
+}
+
+/**
+ * Kontrollerar att en sparad post får skrivas över. En giltig faktura följer
+ * låsreglerna. En post med fel form får bara skrivas över om den bevisligen
+ * är ett utkast. Vid tvekan kastas fel.
+ */
+function assertMayOverwrite(stored: unknown, updated: Invoice): void {
+  if (isInvoice(stored)) {
+    assertIssuedInvoiceUnchanged(stored, updated);
+    return;
+  }
+  if (isRecord(stored) && stored.status === 'draft') return;
+  throw new Error(
+    `Den sparade fakturan ${updated.id} har fel form och är inte ett utkast. Den kan inte skrivas över.`,
+  );
 }
 
 /**
@@ -114,59 +163,90 @@ function assertIssuedInvoiceUnchanged(existing: Invoice, updated: Invoice): void
  * från lagringen, så flera Store-instanser ser alltid samma data.
  *
  * Om lagringen inte går att komma åt behandlas den som tom vid läsning och
- * skrivningar kastar fel.
+ * skrivningar kastar fel. Sparade poster som inte har rätt form hoppas över
+ * vid läsning och loggas med console.warn (en gång per post), men de raderas
+ * inte vid nästa skrivning.
  *
  * Fakturanumren bildar en obruten serie som aldrig återanvänds. Utkast har
  * number 0 och påverkar inte serien. Det högsta utdelade numret sparas som
  * ett högvattenmärke. Utfärdade fakturor (status skild från "draft") kan inte
- * raderas, göras om till utkast eller byta nummer eller OCR.
+ * raderas och är låsta utom status (sent -> paid), paidDate och notes.
  */
 export function createLocalStore(storageArg?: Storage): Store {
   const storage = resolveStorage(storageArg);
   ensureVersion(storage);
 
-  const customers = (): Customer[] => readList<Customer>(storage, KEYS.customers);
-  const invoices = (): Invoice[] => readList<Invoice>(storage, KEYS.invoices);
+  const warned = new Set<string>();
+  const warnOnce = (message: string, value: unknown): void => {
+    const signature = `${message}:${JSON.stringify(value)}`;
+    if (warned.has(signature)) return;
+    warned.add(signature);
+    console.warn(`Fakturafix: ${message}`, value);
+  };
+
+  function readValid<T>(key: string, guard: (value: unknown) => value is T, label: string): T[] {
+    return readRawList(storage, key).filter((value): value is T => {
+      if (guard(value)) return true;
+      warnOnce(`hoppar över ${label} med fel form i ${key}`, value);
+      return false;
+    });
+  }
+
+  const customers = (): Customer[] => readValid(KEYS.customers, isCustomer, 'en kund');
+  const invoices = (): Invoice[] => readValid(KEYS.invoices, isInvoice, 'en faktura');
   const lastInvoiceNumber = (): number =>
     Math.max(
       FIRST_INVOICE_NUMBER - 1,
       readInteger(storage, KEYS.lastInvoiceNumber) ?? 0,
-      ...invoices()
-        .map((invoice) => invoice.number)
-        .filter((n) => Number.isSafeInteger(n)),
+      ...invoices().map((invoice) => invoice.number),
     );
 
   return {
     listCustomers: customers,
     getCustomer: (id) => customers().find((customer) => customer.id === id),
-    saveCustomer: (customer) => writeJson(storage, KEYS.customers, upsert(customers(), customer)),
+    saveCustomer: (customer) =>
+      writeJson(storage, KEYS.customers, upsert(readRawList(storage, KEYS.customers), customer)),
     deleteCustomer: (id) =>
-      writeJson(storage, KEYS.customers, customers().filter((customer) => customer.id !== id)),
+      writeJson(
+        storage,
+        KEYS.customers,
+        readRawList(storage, KEYS.customers).filter((value) => !hasId(value, id)),
+      ),
 
     listInvoices: invoices,
     getInvoice: (id) => invoices().find((invoice) => invoice.id === id),
     saveInvoice: (invoice) => {
-      const existing = invoices().find((stored) => stored.id === invoice.id);
-      if (existing) assertIssuedInvoiceUnchanged(existing, invoice);
+      assertValidInvoiceNumber(invoice);
+      assertPaidDateOnlyWhenPaid(invoice);
+      // Läs den råa posten, inte bara de validerade, så att en utfärdad faktura
+      // med trasig form inte kan kringgå låsningen.
+      const stored = readRawList(storage, KEYS.invoices).find((value) => hasId(value, invoice.id));
+      if (stored !== undefined) assertMayOverwrite(stored, invoice);
       const highest = Math.max(lastInvoiceNumber(), invoice.number);
-      writeJson(storage, KEYS.invoices, upsert(invoices(), invoice));
+      writeJson(storage, KEYS.invoices, upsert(readRawList(storage, KEYS.invoices), invoice));
       writeJson(storage, KEYS.lastInvoiceNumber, highest);
     },
     deleteInvoice: (id) => {
-      const existing = invoices().find((invoice) => invoice.id === id);
-      if (!existing) return;
+      // Kontrollera den sparade posten även om den har fel form, så att en
+      // trasig utfärdad faktura inte kan raderas.
+      const raw = readRawList(storage, KEYS.invoices);
+      const existing = raw.find((value) => hasId(value, id));
+      if (!isRecord(existing)) return;
       if (existing.status !== 'draft') {
         throw new Error(
-          `Faktura ${existing.number} är utfärdad och kan inte raderas. Skapa en kreditfaktura i stället.`,
+          `Faktura ${String(existing.number)} är utfärdad och kan inte raderas. Skapa en kreditfaktura i stället.`,
         );
       }
-      writeJson(storage, KEYS.invoices, invoices().filter((invoice) => invoice.id !== id));
+      writeJson(storage, KEYS.invoices, raw.filter((value) => !hasId(value, id)));
     },
     nextInvoiceNumber: () => lastInvoiceNumber() + 1,
 
     getSettings: () => {
       const value = readJson(storage, KEYS.settings);
-      return isRecord(value) ? (value as unknown as CompanySettings) : undefined;
+      if (value === undefined) return undefined;
+      if (isCompanySettings(value)) return value;
+      warnOnce(`ignorerar företagsinställningar med fel form i ${KEYS.settings}`, value);
+      return undefined;
     },
     saveSettings: (settings) => writeJson(storage, KEYS.settings, settings),
   };
