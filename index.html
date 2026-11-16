@@ -63,7 +63,7 @@
       .brand { font-weight: 600; font-size: 1.15rem; color: var(--header-text); text-decoration: none; }
       header.site a.link { color: var(--header-muted); text-decoration: none; }
       header.site a:focus-visible { outline-color: var(--header-text); }
-      .hero { background: var(--header-bg); color: var(--header-text); padding: 48px 0 64px; }
+      .hero { background: var(--header-bg); color: var(--header-text); padding: 48px 0 64px; margin-bottom: 24px; }
       .hero h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.2; margin: 0 0 16px; max-width: 20em; }
       .hero p { font-size: 1.15rem; color: var(--header-muted); max-width: 36em; margin: 0 0 24px; }
       .btn { display: inline-block; padding: 12px 24px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; }
@@ -71,8 +71,10 @@
       .hero .btn { background: #ffffff; color: #1f2d3d; }
       .hero .btn:focus-visible { outline-color: #ffffff; }
       .hero .note { font-size: 0.9rem; margin: 12px 0 0; }
-      section { padding: 48px 0 0; }
+      section.wrap { padding-top: 40px; padding-bottom: 40px; }
+      @media (max-width: 600px) { section.wrap { padding-top: 28px; padding-bottom: 28px; } }
       h2 { font-size: 1.6rem; margin: 0 0 24px; line-height: 1.25; }
+      .cta h2 { margin-bottom: 24px; }
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
       .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
       .card h3 { margin: 0 0 8px; font-size: 1.1rem; }
@@ -83,7 +85,12 @@
       details { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
       summary { cursor: pointer; font-weight: 600; }
       details p { margin: 8px 0 0; color: var(--muted); }
-      .shot { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgb(0 0 0 / 0.08); }
+      .figure { margin: 0; }
+      .shot { display: block; width: 100%; height: auto; border-radius: 12px 12px 0 0; border: 1px solid var(--border); border-bottom: 0; -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent); mask-image: linear-gradient(to bottom, #000 65%, transparent); }
+      .caption { margin: 8px 0 0; text-align: center; color: var(--muted); font-size: 0.95rem; }
+      .brand { display: inline-flex; align-items: center; gap: 8px; }
+      .brand svg { width: 28px; height: 28px; color: var(--header-text); }
+      .brand svg path { stroke: var(--header-bg); }
       .cta { text-align: center; padding-bottom: 48px; }
       footer { border-top: 1px solid var(--border); padding: 24px 0; color: var(--muted); font-size: 0.9rem; }
     </style>
@@ -91,7 +98,7 @@
   <body>
     <header class="site">
       <div class="wrap">
-        <a class="brand" href="./">Fakturafix</a>
+        <a class="brand" href="./"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="4" y="2" width="24" height="28" rx="4" fill="currentColor"/><path d="M10 11h12M10 16h12M10 21h7" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><span>Fakturafix</span></a>
         <a class="link" href="app/">Öppna appen</a>
       </div>
     </header>
@@ -123,7 +130,10 @@
       </section>
 
       <section class="wrap" aria-label="Skärmbild av översikten">
-        <img class="shot" src="oversikt.webp" width="1100" height="640" alt="Översikten i Fakturafix med nyckeltal och en lista över fakturor" loading="lazy" />
+        <figure class="figure">
+          <img class="shot" src="oversikt.webp" width="1100" height="640" alt="Översikten i Fakturafix med nyckeltal och en lista över fakturor" loading="lazy" />
+          <figcaption class="caption">Översikten: se direkt vad som är obetalt och förfallet</figcaption>
+        </figure>
       </section>
 
       <section class="wrap" aria-labelledby="sa-funkar-det">
