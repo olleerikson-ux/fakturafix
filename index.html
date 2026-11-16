@@ -3,10 +3,179 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fakturafix</title>
+    <title>Fakturafix – gratis fakturering för enskild firma</title>
+    <meta
+      name="description"
+      content="Fakturera gratis direkt i webbläsaren. Rätt moms, OCR och proffsig PDF automatiskt. Ingen inloggning, för frilansare och enskilda firmor."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="sv_SE" />
+    <meta property="og:title" content="Fakturafix – gratis fakturering för enskild firma" />
+    <meta
+      property="og:description"
+      content="Fakturera gratis direkt i webbläsaren. Rätt moms, OCR och proffsig PDF automatiskt. Ingen inloggning."
+    />
+    <script>
+      // Gamla bokmärken som #/oversikt skickas vidare till appen med samma hash.
+      if (location.hash.indexOf('#/') === 0) location.replace('app/' + location.hash);
+    </script>
+    <style>
+      :root {
+        --bg: #f3f4f6;
+        --surface: #ffffff;
+        --text: #1b1f24;
+        --muted: #566070;
+        --accent: #2f5577;
+        --on-accent: #ffffff;
+        --border: #d5d9e0;
+        --header-bg: #1f2d3d;
+        --header-text: #ffffff;
+        --header-muted: #c9d3df;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #151a21;
+          --surface: #1e252e;
+          --text: #e4e8ed;
+          --muted: #a0aab8;
+          --accent: #8db4d9;
+          --on-accent: #0f1a26;
+          --border: #333d4a;
+          --header-bg: #10151c;
+          --header-text: #e4e8ed;
+          --header-muted: #a0aab8;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: var(--text);
+        background: var(--bg);
+      }
+      a { color: var(--accent); }
+      a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+      header.site { background: var(--header-bg); color: var(--header-text); }
+      header.site .wrap { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; padding-bottom: 12px; }
+      .brand { font-weight: 600; font-size: 1.15rem; color: var(--header-text); text-decoration: none; }
+      header.site a.link { color: var(--header-muted); text-decoration: none; }
+      header.site a:focus-visible { outline-color: var(--header-text); }
+      .hero { background: var(--header-bg); color: var(--header-text); padding: 48px 0 64px; margin-bottom: 24px; }
+      .hero h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.2; margin: 0 0 16px; max-width: 20em; }
+      .hero p { font-size: 1.15rem; color: var(--header-muted); max-width: 36em; margin: 0 0 24px; }
+      .btn { display: inline-block; padding: 12px 24px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; }
+      .btn:hover { filter: brightness(0.88); }
+      .hero .btn { background: #ffffff; color: #1f2d3d; }
+      .hero .btn:focus-visible { outline-color: #ffffff; }
+      .hero .note { font-size: 0.9rem; margin: 12px 0 0; }
+      section.wrap { padding-top: 40px; padding-bottom: 40px; }
+      @media (max-width: 600px) { section.wrap { padding-top: 28px; padding-bottom: 28px; } }
+      h2 { font-size: 1.6rem; margin: 0 0 24px; line-height: 1.25; }
+      .cta h2 { margin-bottom: 24px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
+      .card h3 { margin: 0 0 8px; font-size: 1.1rem; }
+      .card p { margin: 0; color: var(--muted); }
+      ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+      ol.steps li { counter-increment: step; }
+      ol.steps li::before { content: counter(step); display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 600; margin-bottom: 8px; }
+      details { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+      summary { cursor: pointer; font-weight: 600; }
+      details p { margin: 8px 0 0; color: var(--muted); }
+      .figure { margin: 0; }
+      .shot { display: block; width: 100%; height: auto; border-radius: 12px 12px 0 0; border: 1px solid var(--border); border-bottom: 0; -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent); mask-image: linear-gradient(to bottom, #000 65%, transparent); }
+      .caption { margin: 8px 0 0; text-align: center; color: var(--muted); font-size: 0.95rem; }
+      .brand { display: inline-flex; align-items: center; gap: 8px; }
+      .brand svg { width: 28px; height: 28px; color: var(--header-text); }
+      .brand svg path { stroke: var(--header-bg); }
+      .cta { text-align: center; padding-bottom: 48px; }
+      footer { border-top: 1px solid var(--border); padding: 24px 0; color: var(--muted); font-size: 0.9rem; }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="./"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect x="4" y="2" width="24" height="28" rx="4" fill="currentColor"/><path d="M10 11h12M10 16h12M10 21h7" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg><span>Fakturafix</span></a>
+        <a class="link" href="app/">Öppna appen</a>
+      </div>
+    </header>
+    <main>
+      <div class="hero">
+        <div class="wrap">
+          <h1>Fakturera enklare, helt gratis.</h1>
+          <p>Direkt i webbläsaren, utan inloggning. Dina fakturor stannar hos dig.</p>
+          <a class="btn" href="app/">Kom igång gratis</a>
+        </div>
+      </div>
+
+      <section class="wrap" aria-labelledby="fordelar">
+        <h2 id="fordelar">Gjort för dig som fakturerar själv</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Rätt moms och OCR automatiskt</h3>
+            <p>Fakturafix räknar ut momsen (25, 12, 6 eller 0 %) och skapar OCR-nummer och en obruten nummerserie åt dig.</p>
+          </div>
+          <div class="card">
+            <h3>Din data, din kontroll</h3>
+            <p>Ingen inloggning, och fakturorna sparas i din webbläsare, inte på någon server. Ladda ner en säkerhetskopia när du vill.</p>
+          </div>
+          <div class="card">
+            <h3>Proffsiga PDF-fakturor</h3>
+            <p>Svensk standardlayout med bankgiro, F-skatt och org.nr, plus en tydlig översikt över vad som är betalt.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap" aria-label="Skärmbild av översikten">
+        <figure class="figure">
+          <img class="shot" src="oversikt.webp" width="1100" height="640" alt="Översikten i Fakturafix med nyckeltal och en lista över fakturor" loading="lazy" />
+          <figcaption class="caption">Översikten: se direkt vad som är obetalt och förfallet</figcaption>
+        </figure>
+      </section>
+
+      <section class="wrap" aria-labelledby="sa-funkar-det">
+        <h2 id="sa-funkar-det">Så funkar det</h2>
+        <ol class="steps">
+          <li><h3>Starta direkt</h3><p>Du behöver inget konto. Öppna Fakturafix och fyll i ditt företag.</p></li>
+          <li><h3>Skapa fakturan</h3><p>Välj kund och skriv vad du har gjort. Moms, nummer och OCR sköts automatiskt.</p></li>
+          <li><h3>Skicka och håll koll</h3><p>Spara som PDF, skicka till kunden och följ upp obetalda och förfallna fakturor i översikten.</p></li>
+        </ol>
+      </section>
+
+      <section class="wrap" aria-labelledby="fragor">
+        <h2 id="fragor">Vanliga frågor</h2>
+        <details>
+          <summary>Vad kostar Fakturafix?</summary>
+          <p>Det är gratis att använda just nu.</p>
+        </details>
+        <details>
+          <summary>Var sparas mina fakturor?</summary>
+          <p>Lokalt i din webbläsare. De lagras inte på någon server hos oss.</p>
+        </details>
+        <details>
+          <summary>Behöver jag ta säkerhetskopia?</summary>
+          <p>Ja. Om du rensar webbläsarens webbplatsdata eller byter dator kan fakturorna annars försvinna. Ladda ner en säkerhetskopia under Inställningar.</p>
+        </details>
+        <details>
+          <summary>Ersätter Fakturafix en redovisningskonsult?</summary>
+          <p>Nej. Fakturafix hjälper dig att göra rätt, men det är alltid ditt ansvar att fakturorna följer gällande regler.</p>
+        </details>
+        <details>
+          <summary>Fungerar det på mobilen?</summary>
+          <p>Ja, både på mobil och dator, och det finns mörkt läge.</p>
+        </details>
+      </section>
+
+      <section class="wrap cta" aria-labelledby="start">
+        <h2 id="start">Redo att skicka din första faktura?</h2>
+        <a class="btn" href="app/">Kom igång gratis</a>
+      </section>
+    </main>
+    <footer>
+      <div class="wrap">Fakturafix. En enkel fakturering för svenska frilansare och enskilda firmor.</div>
+    </footer>
   </body>
 </html>
