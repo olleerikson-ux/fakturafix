@@ -129,6 +129,7 @@ export function importBackup(
   if (mode !== "replace") throw new Error(`Okänt importläge: ${String(mode)}`);
   const highest = Math.max(
     backup.lastInvoiceNumber,
+    store.nextInvoiceNumber() - 1,
     ...backup.invoices.map((invoice) => invoice.number),
   );
   store.replaceAll({
