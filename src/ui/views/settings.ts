@@ -3,6 +3,7 @@
  */
 import type { CompanySettings, Store } from '../../core/index';
 import { h } from '../dom';
+import { backupSection } from './backup-section';
 import {
   checkboxField,
   type FieldErrors,
@@ -109,10 +110,11 @@ function formatPercent(value: number | undefined): string | undefined {
   return value === undefined ? undefined : String(value).replace('.', ',');
 }
 
-export function settingsView(root: HTMLElement, store: Store): void {
+export function settingsView(root: HTMLElement, store: Store, notice?: string): void {
   const s = store.getSettings();
   const field = (spec: Parameters<typeof textField>[1]) => textField(ID_PREFIX, spec);
   const status = h('div', { class: 'status', role: 'status', 'aria-live': 'polite' });
+  if (notice) status.append(h('p', { class: 'notice notice-ok' }, notice));
 
   const form = h(
     'form',
@@ -190,5 +192,6 @@ export function settingsView(root: HTMLElement, store: Store): void {
     h('p', {}, 'Uppgifterna skrivs ut på dina fakturor.'),
     h('section', { class: 'card' }, form),
     status,
+    backupSection(store, () => settingsView(root, store, '✓ Säkerhetskopian är inläst. All data har ersatts.')),
   );
 }
