@@ -559,3 +559,59 @@ select {
   background: var(--surface);
   color: var(--text);
 }
+
+/* ---- Justeringar ---- */
+.kpi strong {
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.table td.actions {
+  display: table-cell;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table td.actions > * {
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+a.btn-secondary {
+  display: inline-block;
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+a.btn-secondary:hover {
+  border-color: var(--accent);
+}
+
+@media (max-width: 600px) {
+  .table td.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    text-align: left;
+  }
+
+  .table td.actions > * {
+    margin-left: 0;
+  }
+}

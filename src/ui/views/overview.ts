@@ -94,16 +94,16 @@ export function overviewView(root: HTMLElement, store: Store): void {
       return h(
         'tr',
         {},
-        h('td', { class: 'num' }, invoice.number ? String(invoice.number) : '–'),
-        h('td', {}, name),
-        h('td', {}, invoice.issueDate),
-        h('td', {}, invoice.dueDate),
-        h('td', { class: 'num' }, formatSek(calculateTotals(invoice.lines).total)),
-        h('td', {}, h('span', { class: `badge badge-${status}` }, statusLabel(status))),
+        h('td', { class: 'num', 'data-label': 'Nr' }, invoice.number ? String(invoice.number) : '–'),
+        h('td', { 'data-label': 'Kund' }, name),
+        h('td', { 'data-label': 'Datum' }, invoice.issueDate),
+        h('td', { 'data-label': 'Förfaller' }, invoice.dueDate),
+        h('td', { class: 'num', 'data-label': 'Belopp' }, formatSek(calculateTotals(invoice.lines).total)),
+        h('td', { 'data-label': 'Status' }, h('span', { class: `badge badge-${status}` }, statusLabel(status))),
         h(
           'td',
           { class: 'actions' },
-          h('a', { href: `#/fakturor/${invoice.id}`, 'aria-label': `Öppna ${label}` }, 'Öppna'),
+          h('a', { class: 'btn-secondary', href: `#/fakturor/${invoice.id}`, 'aria-label': `Öppna ${label}` }, 'Öppna'),
           invoice.status === 'sent'
             ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Markera ${label} som betald`, onclick: () => markPaid(invoice) }, 'Markera som betald')
             : '',
