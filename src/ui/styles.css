@@ -332,3 +332,15 @@ button:disabled,
     max-width: none;
   }
 }
+
+/* ---- Översikt ---- */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.kpi strong { font-size: 1.4rem; }
+.kpi-label { color: var(--muted); font-size: 0.85rem; }
+.kpi-danger strong { color: var(--danger); }
+.filter { margin-bottom: 0.75rem; }
+.num { text-align: right; white-space: nowrap; }
+.badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.8rem; background: var(--bg); border: 1px solid var(--border); }
+.badge-overdue { color: var(--danger); border-color: var(--danger); }
+.badge-paid { color: var(--ok); border-color: var(--ok); }
