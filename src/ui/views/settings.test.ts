@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CompanySettings, Store } from '../../core/index';
 import { createMemoryStore, fill } from '../test-utils';
 import { settingsView } from './settings';
@@ -35,6 +35,7 @@ describe('settingsView', () => {
 
   afterEach(() => {
     root.remove();
+    vi.restoreAllMocks();
   });
 
   it('visar ett tomt formulär med 30 dagars betalningsvillkor som standard', () => {
@@ -77,7 +78,7 @@ describe('settingsView', () => {
       name: 'Testfirman',
       orgNumber: '556000-0000',
       vatNumber: undefined,
-      address: { street: 'Testgatan 1', postalCode: '123 45', city: 'Teststad' },
+      address: { street: 'Testgatan 1', postalCode: '123 45', city: 'Teststad', country: undefined },
       email: undefined,
       phone: undefined,
       bankgiro: '123-4567',
@@ -102,5 +103,24 @@ describe('settingsView', () => {
     expect(root.querySelector('#inst-postalCode-error')?.textContent).toContain('5 siffror');
     expect(root.querySelector('#inst-paymentTermsDays-error')?.textContent).toContain('antal dagar');
     expect(root.querySelector('[role="status"]')?.textContent).toBe('');
+  });
+
+  it('behåller sparat land eftersom formuläret saknar landfält', () => {
+    store.saveSettings({ ...testSettings, address: { ...testSettings.address, country: 'Sverige' } });
+    settingsView(root, store);
+    getForm(root).requestSubmit();
+
+    expect(store.getSettings()?.address.country).toBe('Sverige');
+  });
+
+  it('visar ett fel om lagringen inte kan spara', () => {
+    store.saveSettings(testSettings);
+    vi.spyOn(store, 'saveSettings').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    settingsView(root, store);
+    getForm(root).requestSubmit();
+
+    expect(root.querySelector('[role="status"] .notice-error')?.textContent).toContain('Kunde inte spara inställningarna');
   });
 });

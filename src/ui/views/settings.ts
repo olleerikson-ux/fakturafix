@@ -13,6 +13,7 @@ import {
   readChecked,
   readText,
   showErrors,
+  STORAGE_ERROR_HINT,
   textField,
 } from '../form';
 
@@ -82,8 +83,8 @@ function readSettingsInput(form: HTMLFormElement): SettingsInput {
   };
 }
 
-/** Förutsätter att indata är validerad. */
-function toSettings(input: SettingsInput): CompanySettings {
+/** Förutsätter att indata är validerad. Land saknas i formuläret och behålls från tidigare. */
+function toSettings(input: SettingsInput, previous: CompanySettings | undefined): CompanySettings {
   return {
     name: input.name,
     orgNumber: input.orgNumber,
@@ -92,6 +93,7 @@ function toSettings(input: SettingsInput): CompanySettings {
       street: input.street,
       postalCode: formatPostalCode(input.postalCode),
       city: input.city,
+      country: previous?.address.country,
     },
     email: optional(input.email),
     phone: optional(input.phone),
@@ -172,7 +174,14 @@ export function settingsView(root: HTMLElement, store: Store): void {
       status.replaceChildren();
       return;
     }
-    store.saveSettings(toSettings(input));
+    try {
+      store.saveSettings(toSettings(input, store.getSettings()));
+    } catch {
+      status.replaceChildren(
+        h('p', { class: 'notice notice-error' }, `Kunde inte spara inställningarna. ${STORAGE_ERROR_HINT}`),
+      );
+      return;
+    }
     status.replaceChildren(h('p', { class: 'notice notice-ok' }, '✓ Inställningarna är sparade.'));
   });
 

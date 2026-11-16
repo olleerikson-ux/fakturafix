@@ -6,11 +6,13 @@ import { h } from '../dom';
 import {
   type FieldErrors,
   formatPostalCode,
+  isSwedishCountry,
   isValidEmail,
   isValidPostalCode,
   optional,
   readText,
   showErrors,
+  STORAGE_ERROR_HINT,
   textField,
 } from '../form';
 
@@ -35,7 +37,7 @@ export function validateCustomer(input: CustomerInput): FieldErrors {
   if (!input.name) errors.name = 'Ange kundens namn.';
   if (!input.street) errors.street = 'Ange gatuadress.';
   if (!input.postalCode) errors.postalCode = 'Ange postnummer.';
-  else if (!isValidPostalCode(input.postalCode)) errors.postalCode = 'Postnumret ska vara 5 siffror, t.ex. 123 45.';
+  else if (isSwedishCountry(input.country) && !isValidPostalCode(input.postalCode)) errors.postalCode = 'Svenska postnummer ska vara 5 siffror, t.ex. 123 45. Fyll i Land för utländska adresser.';
   if (!input.city) errors.city = 'Ange ort.';
   if (input.email && !isValidEmail(input.email)) errors.email = 'Ange en giltig e-postadress.';
   return errors;
@@ -65,7 +67,7 @@ function toCustomer(input: CustomerInput, existing: Customer | undefined): Custo
     reference: optional(input.reference),
     address: {
       street: input.street,
-      postalCode: formatPostalCode(input.postalCode),
+      postalCode: isSwedishCountry(input.country) ? formatPostalCode(input.postalCode) : input.postalCode,
       city: input.city,
       country: optional(input.country),
     },
@@ -83,8 +85,8 @@ export function customersView(root: HTMLElement, store: Store): void {
   const listSection = h('section', { class: 'card', 'aria-labelledby': `${ID_PREFIX}-list-title` });
   const formSection = h('section', { class: 'card', 'aria-labelledby': `${ID_PREFIX}-form-title` });
 
-  const announce = (text: string) => {
-    status.replaceChildren(...(text ? [h('p', { class: 'notice notice-ok' }, text)] : []));
+  const announce = (text: string, kind: 'ok' | 'error' = 'ok') => {
+    status.replaceChildren(...(text ? [h('p', { class: `notice notice-${kind}` }, text)] : []));
   };
 
   const startEdit = (customer: Customer) => {
@@ -95,8 +97,22 @@ export function customersView(root: HTMLElement, store: Store): void {
   };
 
   const remove = (customer: Customer) => {
+    const invoiceCount = store.listInvoices().filter((i) => i.customerId === customer.id).length;
+    if (invoiceCount > 0) {
+      const what = invoiceCount === 1 ? '1 faktura' : `${invoiceCount} fakturor`;
+      announce(
+        `${customer.name} kan inte tas bort eftersom kunden har ${what}. Kunduppgifterna behövs på fakturorna.`,
+        'error',
+      );
+      return;
+    }
     if (!window.confirm(`Vill du ta bort kunden ${customer.name}?`)) return;
-    store.deleteCustomer(customer.id);
+    try {
+      store.deleteCustomer(customer.id);
+    } catch {
+      announce(`Kunde inte ta bort ${customer.name}. ${STORAGE_ERROR_HINT}`, 'error');
+      return;
+    }
     if (editing?.id === customer.id) {
       editing = undefined;
       renderForm();
@@ -188,7 +204,7 @@ export function customersView(root: HTMLElement, store: Store): void {
           label: 'Postnummer',
           value: c?.address.postalCode,
           required: true,
-          inputmode: 'numeric',
+          hint: '5 siffror för svenska adresser',
           autocomplete: 'postal-code',
         }),
         field({ name: 'city', label: 'Ort', value: c?.address.city, required: true, autocomplete: 'address-level2' }),
@@ -225,7 +241,12 @@ export function customersView(root: HTMLElement, store: Store): void {
         return;
       }
       const customer = toCustomer(input, editing);
-      store.saveCustomer(customer);
+      try {
+        store.saveCustomer(customer);
+      } catch {
+        announce(`Kunde inte spara kunden. ${STORAGE_ERROR_HINT}`, 'error');
+        return;
+      }
       const wasEditing = editing !== undefined;
       editing = undefined;
       renderList();

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Customer, Store } from '../../core/index';
+import type { Customer, Invoice, Store } from '../../core/index';
 import { createMemoryStore, fill } from '../test-utils';
 import { customersView, validateCustomer, type CustomerInput } from './customers';
 
@@ -144,6 +144,65 @@ describe('customersView', () => {
     expect(root.querySelector('.empty')).not.toBeNull();
   });
 
+  it('sparar en utländsk kund med postnumret oförändrat', () => {
+    customersView(root, store);
+    const form = getForm(root);
+    fillRequired(form);
+    fill(form, 'postalCode', 'SW1A 1AA');
+    fill(form, 'country', 'Storbritannien');
+    form.requestSubmit();
+
+    expect(store.listCustomers()[0]?.address).toMatchObject({ postalCode: 'SW1A 1AA', country: 'Storbritannien' });
+  });
+
+  it('tar inte bort en kund som har fakturor och förklarar varför', () => {
+    store.saveCustomer(testCustomer);
+    const invoice: Invoice = {
+      id: 'f1',
+      number: 1001,
+      customerId: 'k1',
+      issueDate: '2026-01-01',
+      dueDate: '2026-01-31',
+      lines: [],
+      ocr: '100164',
+      status: 'sent',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    };
+    store.saveInvoice(invoice);
+    customersView(root, store);
+    const confirm = vi.spyOn(window, 'confirm');
+    button(root, 'Ta bort').click();
+
+    expect(confirm).not.toHaveBeenCalled();
+    expect(store.listCustomers()).toHaveLength(1);
+    expect(root.querySelector('[role="status"]')?.textContent).toContain('kan inte tas bort eftersom kunden har 1 faktura');
+  });
+
+  it('visar ett fel om lagringen inte kan spara', () => {
+    vi.spyOn(store, 'saveCustomer').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    customersView(root, store);
+    const form = getForm(root);
+    fillRequired(form);
+    form.requestSubmit();
+
+    expect(root.querySelector('[role="status"] .notice-error')?.textContent).toContain('Kunde inte spara kunden');
+  });
+
+  it('visar ett fel om lagringen inte kan ta bort', () => {
+    store.saveCustomer(testCustomer);
+    vi.spyOn(store, 'deleteCustomer').mockImplementation(() => {
+      throw new Error('SecurityError');
+    });
+    customersView(root, store);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    button(root, 'Ta bort').click();
+
+    expect(root.querySelector('[role="status"] .notice-error')?.textContent).toContain('Kunde inte ta bort');
+    expect(root.querySelector('tbody')?.textContent).toContain('Testkund AB');
+  });
+
   it('tar inte bort kunden om användaren avbryter', () => {
     store.saveCustomer(testCustomer);
     customersView(root, store);
@@ -173,6 +232,14 @@ describe('validateCustomer', () => {
 
   it.each(['1234', '123456', '12a45'])('underkänner postnumret "%s"', (postalCode) => {
     expect(validateCustomer({ ...valid, postalCode })).toHaveProperty('postalCode');
+  });
+
+  it.each(['10115', 'SW1A 1AA'])('godkänner det utländska postnumret "%s"', (postalCode) => {
+    expect(validateCustomer({ ...valid, postalCode, country: 'Tyskland' })).toEqual({});
+  });
+
+  it('kräver svenskt postnummer när landet är Sverige', () => {
+    expect(validateCustomer({ ...valid, postalCode: '1234', country: 'Sverige' })).toHaveProperty('postalCode');
   });
 
   it('underkänner en ogiltig e-postadress', () => {

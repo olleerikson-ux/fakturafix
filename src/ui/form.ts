@@ -113,6 +113,14 @@ export function formatPostalCode(value: string): string {
   return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 }
 
+/** Tomt land eller "Sverige" räknas som svensk adress (se Address.country). */
+export function isSwedishCountry(country: string): boolean {
+  return country === '' || /^(sverige|sweden)$/i.test(country.trim());
+}
+
+/** Visas när lagringen kastar fel, t.ex. full eller blockerad i privat läge. */
+export const STORAGE_ERROR_HINT = 'Lagringen kan vara full eller blockerad, till exempel i privat läge. Försök igen.';
+
 /** Enkel kontroll av e-postadress (något@något). */
 export function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
