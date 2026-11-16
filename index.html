@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fakturafix – gratis fakturaprogram för enskild firma och frilansare</title>
+    <title>Fakturafix – gratis fakturering för enskild firma</title>
     <meta
       name="description"
-      content="Fakturafix är ett gratis fakturaprogram för enskild firma och frilansare. Skapa fakturor med rätt moms och OCR-nummer, ladda ner som PDF. Ingen inloggning, din data stannar i din webbläsare."
+      content="Fakturera gratis direkt i webbläsaren. Rätt moms, OCR och proffsig PDF automatiskt. Ingen inloggning, för frilansare och enskilda firmor."
     />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="sv_SE" />
-    <meta property="og:title" content="Fakturafix – gratis fakturaprogram för frilansare" />
+    <meta property="og:title" content="Fakturafix – gratis fakturering för enskild firma" />
     <meta
       property="og:description"
-      content="Skapa proffsiga fakturor med rätt moms och OCR-nummer. Gratis, utan inloggning."
+      content="Fakturera gratis direkt i webbläsaren. Rätt moms, OCR och proffsig PDF automatiskt. Ingen inloggning."
     />
     <script>
       // Gamla bokmärken som #/oversikt skickas vidare till appen med samma hash.
@@ -83,6 +83,7 @@
       details { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
       summary { cursor: pointer; font-weight: 600; }
       details p { margin: 8px 0 0; color: var(--muted); }
+      .shot { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgb(0 0 0 / 0.08); }
       .cta { text-align: center; padding-bottom: 48px; }
       footer { border-top: 1px solid var(--border); padding: 24px 0; color: var(--muted); font-size: 0.9rem; }
     </style>
@@ -97,13 +98,9 @@
     <main>
       <div class="hero">
         <div class="wrap">
-          <h1>Fakturor som blir rätt, utan krångel</h1>
-          <p>
-            Fakturafix är ett gratis fakturaprogram för enskild firma och frilansare. Skapa en faktura med rätt moms
-            och OCR-nummer och ladda ner den som PDF på några minuter.
-          </p>
+          <h1>Fakturera enklare, helt gratis.</h1>
+          <p>Direkt i webbläsaren, utan inloggning. Dina fakturor stannar hos dig.</p>
           <a class="btn" href="app/">Kom igång gratis</a>
-          <p class="note">Ingen registrering och ingen inloggning.</p>
         </div>
       </div>
 
@@ -112,41 +109,53 @@
         <div class="grid">
           <div class="card">
             <h3>Rätt moms och OCR automatiskt</h3>
-            <p>Välj 25, 12, 6 eller 0 % moms. Fakturafix räknar ut summorna, avrundar till hela kronor och skapar ett OCR-nummer.</p>
+            <p>Fakturafix räknar ut momsen (25, 12, 6 eller 0 %) och skapar OCR-nummer och en obruten nummerserie åt dig.</p>
           </div>
           <div class="card">
-            <h3>Proffsig PDF på sekunder</h3>
-            <p>Fakturan får svensk standardlayout med bankgiro, org.nr och F-skatt. Skriv ut den eller spara den som PDF.</p>
+            <h3>Din data, din kontroll</h3>
+            <p>Ingen inloggning, och fakturorna sparas i din webbläsare, inte på någon server. Ladda ner en säkerhetskopia när du vill.</p>
           </div>
           <div class="card">
-            <h3>Ingen inloggning, din data stannar hos dig</h3>
-            <p>Allt sparas i din egen webbläsare. Det finns inget konto och ingen server som lagrar dina kunder eller fakturor.</p>
+            <h3>Proffsiga PDF-fakturor</h3>
+            <p>Svensk standardlayout med bankgiro, F-skatt och org.nr, plus en tydlig översikt över vad som är betalt.</p>
           </div>
         </div>
+      </section>
+
+      <section class="wrap" aria-label="Skärmbild av översikten">
+        <img class="shot" src="oversikt.webp" width="1100" height="640" alt="Översikten i Fakturafix med nyckeltal och en lista över fakturor" loading="lazy" />
       </section>
 
       <section class="wrap" aria-labelledby="sa-funkar-det">
         <h2 id="sa-funkar-det">Så funkar det</h2>
         <ol class="steps">
-          <li><h3>Fyll i ditt företag</h3><p>Namn, org.nr och bankgiro. Det gör du en gång.</p></li>
-          <li><h3>Lägg till en kund och skapa fakturan</h3><p>Skriv raderna, välj moms och förfallodatum.</p></li>
-          <li><h3>Skicka och följ upp</h3><p>Spara som PDF och se i översikten vad som är betalt, obetalt eller förfallet.</p></li>
+          <li><h3>Starta direkt</h3><p>Du behöver inget konto. Öppna Fakturafix och fyll i ditt företag.</p></li>
+          <li><h3>Skapa fakturan</h3><p>Välj kund och skriv vad du har gjort. Moms, nummer och OCR sköts automatiskt.</p></li>
+          <li><h3>Skicka och håll koll</h3><p>Spara som PDF, skicka till kunden och följ upp obetalda och förfallna fakturor i översikten.</p></li>
         </ol>
       </section>
 
       <section class="wrap" aria-labelledby="fragor">
         <h2 id="fragor">Vanliga frågor</h2>
         <details>
-          <summary>Är det gratis?</summary>
-          <p>Ja. Du kan skapa fakturor, hantera kunder och spara PDF utan att betala och utan att registrera dig.</p>
+          <summary>Vad kostar Fakturafix?</summary>
+          <p>Det är gratis att använda just nu.</p>
         </details>
         <details>
-          <summary>Var sparas min data?</summary>
-          <p>Lokalt i din webbläsare på din egen dator. Ingenting skickas till någon server. Det betyder också att du bör ta en säkerhetskopia av dina uppgifter regelbundet, och att datan inte följer med till en annan webbläsare eller enhet.</p>
+          <summary>Var sparas mina fakturor?</summary>
+          <p>Lokalt i din webbläsare. De lagras inte på någon server hos oss.</p>
         </details>
         <details>
-          <summary>Uppfyller fakturorna lagkraven?</summary>
-          <p>Fakturorna innehåller de uppgifter som en svensk faktura normalt ska ha: unikt löpnummer, datum, köpare, specificerade rader, moms per sats, org.nr och, om du har det, F-skatt. Du ansvarar själv för att uppgifterna är rätt. Fakturafix ersätter inte rådgivning från en revisor eller Skatteverket.</p>
+          <summary>Behöver jag ta säkerhetskopia?</summary>
+          <p>Ja. Om du rensar webbläsarens webbplatsdata eller byter dator kan fakturorna annars försvinna. Ladda ner en säkerhetskopia under Inställningar.</p>
+        </details>
+        <details>
+          <summary>Ersätter Fakturafix en redovisningskonsult?</summary>
+          <p>Nej. Fakturafix hjälper dig att göra rätt, men det är alltid ditt ansvar att fakturorna följer gällande regler.</p>
+        </details>
+        <details>
+          <summary>Fungerar det på mobilen?</summary>
+          <p>Ja, både på mobil och dator, och det finns mörkt läge.</p>
         </details>
       </section>
 
