@@ -14,6 +14,7 @@ export interface FieldSpec {
   required?: boolean;
   autocomplete?: string;
   inputmode?: string;
+  placeholder?: string;
   hint?: string;
 }
 
@@ -30,6 +31,7 @@ export function textField(idPrefix: string, spec: FieldSpec): HTMLElement {
     required: spec.required ?? false,
     autocomplete: spec.autocomplete,
     inputmode: spec.inputmode,
+    placeholder: spec.placeholder,
     'aria-describedby': spec.hint ? hintId : undefined,
   });
   return h(
@@ -40,6 +42,37 @@ export function textField(idPrefix: string, spec: FieldSpec): HTMLElement {
     input,
     h('p', { id: errorId, class: 'field-error', hidden: true }),
   );
+}
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+/** Rullgardinsmeny med <label> och en plats för felmeddelande. */
+export function selectField(
+  idPrefix: string,
+  spec: { name: string; label: string; value?: string | undefined; required?: boolean },
+  options: SelectOption[],
+): HTMLElement {
+  const id = `${idPrefix}-${spec.name}`;
+  return h(
+    'div',
+    { class: 'field' },
+    h('label', { for: id }, spec.required ? `${spec.label} *` : spec.label),
+    h(
+      'select',
+      { id, name: spec.name, required: spec.required ?? false },
+      ...options.map((o) => h('option', { value: o.value, selected: o.value === spec.value }, o.label)),
+    ),
+    h('p', { id: `${id}-error`, class: 'field-error', hidden: true }),
+  );
+}
+
+type FormControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+function isFormControl(el: unknown): el is FormControl {
+  return el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement;
 }
 
 /** Kryssruta med etikett. */
@@ -56,13 +89,18 @@ export function checkboxField(idPrefix: string, name: string, label: string, che
 /** Läser ett trimmat textvärde ur formuläret. */
 export function readText(form: HTMLFormElement, name: string): string {
   const el = form.elements.namedItem(name);
-  return el instanceof HTMLInputElement ? el.value.trim() : '';
+  return isFormControl(el) ? el.value.trim() : '';
 }
 
 /** Läser en kryssruta ur formuläret. */
 export function readChecked(form: HTMLFormElement, name: string): boolean {
   const el = form.elements.namedItem(name);
   return el instanceof HTMLInputElement && el.checked;
+}
+
+/** Text ur ett fel som kastats, t.ex. från lagringen. */
+export function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 /** Tom sträng blir undefined, så att valfria fält inte sparas som "". */
@@ -75,8 +113,8 @@ export function optional(value: string): string | undefined {
  * till det första felaktiga fältet. Returnerar true om det fanns fel.
  */
 export function showErrors(form: HTMLFormElement, errors: FieldErrors): boolean {
-  let first: HTMLInputElement | undefined;
-  for (const input of form.querySelectorAll<HTMLInputElement>('input[name]')) {
+  let first: FormControl | undefined;
+  for (const input of form.querySelectorAll<FormControl>('input[name], select[name], textarea[name]')) {
     const errorEl = form.querySelector<HTMLElement>(`#${input.id}-error`);
     const message = errors[input.name];
     const hintId = form.querySelector(`#${input.id}-hint`) ? `${input.id}-hint` : '';
