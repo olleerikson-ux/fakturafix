@@ -5,6 +5,7 @@
 import { calculateTotals, displayStatus, formatSek, today, type Invoice, type Store } from '../../core/index';
 import { h } from '../dom';
 import { printInvoice } from '../../print/print';
+import { getLastBackupDate, needsBackupReminder } from '../backup-reminder';
 import { errorMessage, STORAGE_ERROR_HINT } from '../form';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -176,9 +177,20 @@ export function overviewView(root: HTMLElement, store: Store): void {
             h('li', {}, h('a', { href: '#/fakturor/ny' }, 'Skapa en faktura')),
           ),
         );
+    const hasData = invoices.length > 0 || store.listCustomers().length > 0;
+    const reminder = needsBackupReminder(hasData, getLastBackupDate(), todayDate)
+      ? h(
+          'p',
+          { class: 'hint backup-reminder' },
+          'Du har inte tagit någon säkerhetskopia de senaste 30 dagarna. ',
+          h('a', { href: '#/installningar' }, 'Ladda ner en säkerhetskopia'),
+          '.',
+        )
+      : '';
     root.replaceChildren(
       h('h1', {}, 'Översikt'),
       welcome,
+      reminder,
       h(
         'div',
         { class: 'kpis' },
