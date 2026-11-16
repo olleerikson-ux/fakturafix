@@ -59,7 +59,18 @@ export function today(): IsoDate {
  * En okänd status (t.ex. från trasig lagrad data) behandlas som "unpaid", så
  * att fakturan syns bland de obetalda i stället för att försvinna.
  */
-export function displayStatus(invoice: Invoice, todayDate: IsoDate): InvoiceDisplayStatus {
+export function displayStatus(
+  invoice: Invoice,
+  todayDate: IsoDate,
+  invoices?: Invoice[],
+): InvoiceDisplayStatus {
+  if (invoice.status !== 'draft') {
+    if (invoice.creditFor !== undefined) return 'credit-note';
+    const credited = invoices?.some(
+      (other) => other.creditFor === invoice.id && other.status !== 'draft',
+    );
+    if (credited) return 'credited';
+  }
   switch (invoice.status) {
     case 'draft':
       return 'draft';

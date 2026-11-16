@@ -86,6 +86,7 @@ export function isInvoice(value: unknown): value is Invoice {
     INVOICE_STATUSES.includes(value.status) &&
     (value.paidDate === undefined || isIsoDate(value.paidDate)) &&
     isOptionalString(value.notes) &&
+    isOptionalString(value.creditFor) &&
     isString(value.createdAt)
   );
 }

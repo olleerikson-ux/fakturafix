@@ -23,6 +23,9 @@ export { addDays, today, displayStatus, isValidIsoDate } from './dates';
 // ---- Lagring ----
 export { createLocalStore } from './storage';
 
+// ---- Kreditfakturor ----
+export { createCreditNote } from './credit';
+
 export interface Store {
   listCustomers(): Customer[];
   getCustomer(id: string): Customer | undefined;
