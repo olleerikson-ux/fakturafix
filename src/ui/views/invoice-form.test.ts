@@ -326,7 +326,7 @@ describe('invoiceFormView', () => {
     expect(root.querySelector('h1')?.textContent).toBe('Faktura 1001');
     expect(root.textContent).toContain('kreditfaktura');
     expect(root.querySelector<HTMLFieldSetElement>('.invoice-content')?.disabled).toBe(true);
-    expect(root.querySelectorAll('.form-actions button')).toHaveLength(0);
+    expect([...root.querySelectorAll('.form-actions button')].map((b) => b.textContent)).toEqual(['Skriv ut']);
     expect(totalsText(root)).toContain(formatSek(187500));
   });
 

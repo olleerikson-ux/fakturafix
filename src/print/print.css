@@ -1,0 +1,148 @@
+/* Fakturalayout för A4. Visas bara vid utskrift, men stilarna gäller även förhandsvisning. */
+#print-root {
+  display: none;
+}
+
+.invoice-print {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 10pt;
+  line-height: 1.4;
+  color: #000;
+  background: #fff;
+}
+
+.invoice-print h1 {
+  font-size: 22pt;
+  margin: 0 0 8pt;
+  letter-spacing: 0.05em;
+}
+
+.invoice-print h2 {
+  font-size: 10pt;
+  text-transform: uppercase;
+  margin: 0 0 4pt;
+}
+
+.invoice-print .inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20pt;
+}
+
+.invoice-print .inv-seller-name {
+  font-size: 14pt;
+}
+
+.invoice-print dl,
+.invoice-print dd {
+  margin: 0;
+}
+
+.invoice-print .inv-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16pt;
+}
+
+.invoice-print dt {
+  font-weight: 600;
+}
+
+.invoice-print .inv-buyer {
+  margin-bottom: 20pt;
+}
+
+.invoice-print .inv-buyer p {
+  margin: 0;
+}
+
+.invoice-print .inv-small {
+  font-size: 9pt;
+  margin-top: 4pt;
+}
+
+.invoice-print table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.invoice-print .inv-lines th,
+.invoice-print .inv-lines td {
+  padding: 4pt 6pt;
+  border-bottom: 0.5pt solid #999;
+  text-align: left;
+}
+
+.invoice-print .inv-lines th {
+  border-bottom: 1pt solid #000;
+}
+
+.invoice-print .num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.invoice-print .inv-totals {
+  width: 55%;
+  margin: 12pt 0 12pt auto;
+}
+
+.invoice-print .inv-totals th {
+  text-align: left;
+  font-weight: 400;
+  padding: 2pt 6pt;
+}
+
+.invoice-print .inv-totals td {
+  padding: 2pt 6pt;
+}
+
+.invoice-print .inv-total th,
+.invoice-print .inv-total td {
+  font-weight: 700;
+  font-size: 12pt;
+  border-top: 1pt solid #000;
+}
+
+.invoice-print .inv-notes {
+  white-space: pre-wrap;
+  margin: 0 0 12pt;
+}
+
+.invoice-print .inv-payment {
+  border: 1pt solid #000;
+  padding: 8pt 10pt;
+  margin-bottom: 20pt;
+  break-inside: avoid;
+}
+
+.invoice-print .inv-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16pt;
+  border-top: 0.5pt solid #999;
+  padding-top: 8pt;
+  font-size: 8.5pt;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  body > *:not(#print-root) {
+    display: none !important;
+  }
+
+  #print-root {
+    display: block;
+  }
+}

@@ -23,6 +23,7 @@ import {
   type Store,
   type VatRate,
 } from '../../core/index';
+import { printInvoice } from '../../print/print';
 import { h } from '../dom';
 import {
   errorMessage,
@@ -404,8 +405,14 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     rerender(undefined, { text: 'Utkastet är raderat.', kind: 'ok' });
   };
 
+  const printNow = () => {
+    if (!existing) return;
+    const problem = printInvoice(store, existing.id);
+    if (problem) announce(problem, 'error');
+  };
+
   const actions = issued
-    ? []
+    ? [h('button', { type: 'button', class: 'btn-primary', onclick: printNow }, 'Skriv ut')]
     : [
         h('button', { type: 'button', class: 'btn-secondary', onclick: () => save('draft') }, 'Spara utkast'),
         h('button', { type: 'button', class: 'btn-primary', onclick: () => save('send') }, 'Markera som skickad'),

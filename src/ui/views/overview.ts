@@ -4,6 +4,7 @@
  */
 import { calculateTotals, displayStatus, formatSek, today, type Invoice, type Store } from '../../core/index';
 import { h } from '../dom';
+import { printInvoice } from '../../print/print';
 import { errorMessage, STORAGE_ERROR_HINT } from '../form';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -72,6 +73,10 @@ export function overviewView(root: HTMLElement, store: Store): void {
       }
       render();
     };
+    const print = (invoice: Invoice) => {
+      message = printInvoice(store, invoice.id) ?? '';
+      if (message) render();
+    };
     const remove = (invoice: Invoice) => {
       try {
         store.deleteInvoice(invoice.id);
@@ -104,6 +109,9 @@ export function overviewView(root: HTMLElement, store: Store): void {
           'td',
           { class: 'actions' },
           h('a', { class: 'btn-secondary', href: `#/fakturor/${invoice.id}`, 'aria-label': `Öppna ${label}` }, 'Öppna'),
+          invoice.status !== 'draft'
+            ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Skriv ut ${label}`, onclick: () => print(invoice) }, 'Skriv ut')
+            : '',
           invoice.status === 'sent'
             ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Markera ${label} som betald`, onclick: () => markPaid(invoice) }, 'Markera som betald')
             : '',
