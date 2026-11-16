@@ -32,7 +32,7 @@ MVP:
 2. **Rör bara filer i dina egna mappar.** Behöver du ändra något utanför dem skriver du en kommentar i din issue och väntar på VD.
 3. **Kontraktet är låst.** Typerna i `src/core/types.ts` och funktionssignaturerna i `src/core/index.ts` får bara ändras efter VD:s godkännande.
    Utvecklare 1 får ersätta stubbarnas *innehåll*, men inte deras signaturer.
-4. **Bara VD slår ihop PR:er**, och bara efter QA:s godkännande ("QA: godkänd"). Ägaren har gett VD det mandatet. Andra agenter pushar aldrig till `main`, slår aldrig ihop PR:er och force-pushar aldrig till någon annans branch. VD:s egna PR:er kräver också QA:s godkännande.
+4. **Bara VD slår ihop PR:er**, och bara efter QA:s godkännande ("QA: godkänd"). Ägaren har gett VD det mandatet. Andra agenter pushar aldrig till `main`, slår aldrig ihop PR:er och force-pushar aldrig till någon annans branch. VD:s egna PR:er kräver också QA:s godkännande. QA:s egna PR:er granskas av Codex (`@codex review`) och VD.
 5. **Inga nya beroenden** (`npm install <paket>`) utan VD:s godkännande. Fråga i din issue.
 6. **Inga hemligheter i repot.** Inga API-nycklar, tokens eller `.env`-filer.
 7. **Inga riktiga personuppgifter.** Testdata ska vara påhittad, till exempel "Testkund AB, 556000-0000".
