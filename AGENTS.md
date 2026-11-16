@@ -19,7 +19,7 @@ MVP:
 | Roll | Vem | Äger mappar |
 |---|---|---|
 | Ägare och styrelse | Människan | Godkänner och slår ihop alla PR:er till `main` |
-| VD | Claude (orkestrerande session) | `AGENTS.md`, `README.md`, `package.json`, `tools/`, kontraktet i `src/core/types.ts` och signaturerna i `src/core/index.ts` |
+| VD | Claude (orkestrerande session) | `AGENTS.md`, `README.md`, `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.ts`, `tools/`, kontraktet i `src/core/types.ts` och signaturerna i `src/core/index.ts` |
 | Utvecklare 1 | Claude-agent | `src/core/**` (implementation) |
 | Utvecklare 2 | Claude-agent | `src/ui/**` |
 | QA | Claude-agent | `tests/**`, `.github/workflows/**`, granskning av PR:er |
