@@ -135,6 +135,28 @@ function assertIssuedInvoiceUnchanged(existing: Invoice, updated: Invoice): void
   }
 }
 
+function assertPaidDateOnlyWhenPaid(invoice: Invoice): void {
+  if (invoice.paidDate !== undefined && invoice.status !== 'paid') {
+    throw new Error('Betaldatum kan bara anges för en betald faktura.');
+  }
+}
+
+/**
+ * Kontrollerar att en sparad post får skrivas över. En giltig faktura följer
+ * låsreglerna. En post med fel form får bara skrivas över om den bevisligen
+ * är ett utkast. Vid tvekan kastas fel.
+ */
+function assertMayOverwrite(stored: unknown, updated: Invoice): void {
+  if (isInvoice(stored)) {
+    assertIssuedInvoiceUnchanged(stored, updated);
+    return;
+  }
+  if (isRecord(stored) && stored.status === 'draft') return;
+  throw new Error(
+    `Den sparade fakturan ${updated.id} har fel form och är inte ett utkast. Den kan inte skrivas över.`,
+  );
+}
+
 /**
  * Skapar ett Store som sparar JSON i webbläsarens localStorage (eller i det
  * Storage-objekt som skickas in, t.ex. i tester). Varje anrop läser direkt
@@ -195,8 +217,11 @@ export function createLocalStore(storageArg?: Storage): Store {
     getInvoice: (id) => invoices().find((invoice) => invoice.id === id),
     saveInvoice: (invoice) => {
       assertValidInvoiceNumber(invoice);
-      const existing = invoices().find((stored) => stored.id === invoice.id);
-      if (existing) assertIssuedInvoiceUnchanged(existing, invoice);
+      assertPaidDateOnlyWhenPaid(invoice);
+      // Läs den råa posten, inte bara de validerade, så att en utfärdad faktura
+      // med trasig form inte kan kringgå låsningen.
+      const stored = readRawList(storage, KEYS.invoices).find((value) => hasId(value, invoice.id));
+      if (stored !== undefined) assertMayOverwrite(stored, invoice);
       const highest = Math.max(lastInvoiceNumber(), invoice.number);
       writeJson(storage, KEYS.invoices, upsert(readRawList(storage, KEYS.invoices), invoice));
       writeJson(storage, KEYS.lastInvoiceNumber, highest);

@@ -334,3 +334,43 @@ describe('createLocalStore: utfärdade fakturor är låsta', () => {
     expect(store.getInvoice('f1')?.customerId).toBe('k2');
   });
 });
+
+describe('createLocalStore: trasiga sparade fakturor och betaldatum', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const sent: Invoice = { ...invoice('f1', 1001), ocr: '100164', status: 'sent' };
+
+  it.each([
+    ['utfärdad med trasiga rader', { ...sent, lines: null }],
+    ['okänd status', { ...sent, status: 'arkiverad' }],
+    ['saknad status', { id: 'f1', number: 1001 }],
+  ])('vägrar skriva över en trasig post (%s) och radera den', (_label, broken) => {
+    localStorage.setItem('fakturafix:invoices', JSON.stringify([broken]));
+    const store = createLocalStore(localStorage);
+    expect(() => store.saveInvoice(invoice('f1', 0))).toThrow(/fel form/);
+    expect(() => store.deleteInvoice('f1')).toThrow(/kan inte raderas/);
+    expect(JSON.parse(localStorage.getItem('fakturafix:invoices') ?? '[]')).toEqual([broken]);
+  });
+
+  it('tillåter att ett trasigt utkast skrivs över med en giltig faktura', () => {
+    localStorage.setItem('fakturafix:invoices', JSON.stringify([{ ...invoice('f1', 0), lines: null }]));
+    const store = createLocalStore(localStorage);
+    store.saveInvoice(invoice('f1', 0));
+    expect(store.getInvoice('f1')).toEqual(invoice('f1', 0));
+  });
+
+  it.each(['draft', 'sent'] as const)('vägrar betaldatum när status är %s', (status) => {
+    const store = createLocalStore(localStorage);
+    const number = status === 'draft' ? 0 : 1001;
+    expect(() => store.saveInvoice({ ...invoice('f1', number), status, paidDate: '2026-12-01' })).toThrow(
+      /Betaldatum/,
+    );
+  });
+});
