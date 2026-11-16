@@ -10,6 +10,10 @@ export default defineConfig({
       input: {
         landing: resolve(__dirname, 'index.html'),
         app: resolve(__dirname, 'app/index.html'),
+        guider: resolve(__dirname, 'guider/index.html'),
+        guideFaktura: resolve(__dirname, 'guider/skriva-faktura-enskild-firma/index.html'),
+        guideOcr: resolve(__dirname, 'guider/ocr-nummer/index.html'),
+        guideMoms: resolve(__dirname, 'guider/momssatser/index.html'),
       },
     },
   },
