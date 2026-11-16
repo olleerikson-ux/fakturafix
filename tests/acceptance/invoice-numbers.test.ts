@@ -113,3 +113,42 @@ describe('utfärdade fakturor raderas aldrig', () => {
     expect(store.getInvoice('a')?.number).toBe(1001);
   });
 });
+
+describe('utfärdade fakturor är låsta (issue #12)', () => {
+  function issuedStore(): Store {
+    const store = createLocalStore(memoryStorage());
+    issue(store, 'a');
+    return store;
+  }
+
+  function issued(store: Store): Invoice {
+    const inv = store.getInvoice('a');
+    if (!inv) throw new Error('Fakturan sparades inte');
+    return inv;
+  }
+
+  it('kan markeras som betald med betaldatum', () => {
+    const store = issuedStore();
+    store.saveInvoice({ ...issued(store), status: 'paid', paidDate: '2026-03-20' });
+    expect(store.getInvoice('a')?.status).toBe('paid');
+    expect(store.getInvoice('a')?.paidDate).toBe('2026-03-20');
+  });
+
+  it('kan inte få ändrade rader, kund eller datum', () => {
+    const store = issuedStore();
+    const inv = issued(store);
+    expect(() =>
+      store.saveInvoice({ ...inv, lines: [{ ...inv.lines[0]!, unitPrice: 1 }] }),
+    ).toThrow();
+    expect(() => store.saveInvoice({ ...inv, customerId: 'annan-kund' })).toThrow();
+    expect(() => store.saveInvoice({ ...inv, dueDate: '2027-01-01' })).toThrow();
+    expect(store.getInvoice('a')).toEqual(inv);
+  });
+
+  it('en betald faktura kan inte gå tillbaka till skickad', () => {
+    const store = issuedStore();
+    store.saveInvoice({ ...issued(store), status: 'paid', paidDate: '2026-03-20' });
+    expect(() => store.saveInvoice({ ...issued(store), status: 'sent', paidDate: undefined })).toThrow();
+    expect(store.getInvoice('a')?.status).toBe('paid');
+  });
+});

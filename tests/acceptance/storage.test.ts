@@ -3,7 +3,7 @@
  * Varje test använder en egen Storage i minnet.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createLocalStore } from '../../src/core';
+import { calculateTotals, createLocalStore } from '../../src/core';
 import { customer, invoice, memoryStorage, settings, storageKeys } from './helpers';
 
 describe('createLocalStore: kunder', () => {
@@ -223,6 +223,38 @@ describe('createLocalStore: blockerad lagring (SecurityError)', () => {
       expect(store.getSettings()).toBeUndefined();
     } finally {
       spy.mockRestore();
+    }
+  });
+});
+
+describe('createLocalStore: poster med fel form (issue #12)', () => {
+  it('hoppar över en kund med fel form, varnar och behåller de giltiga', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const storage = memoryStorage();
+      const store = createLocalStore(storage);
+      const broken: unknown = { ...customer({ id: 'trasig' }), address: undefined };
+      storage.setItem('fakturafix:customers', JSON.stringify([customer({ id: 'ok' }), broken]));
+      expect(store.listCustomers().map((c) => c.id)).toEqual(['ok']);
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('hoppar över en faktura med ogiltig momssats men kraschar inte', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const storage = memoryStorage();
+      const store = createLocalStore(storage);
+      const bad = invoice({ id: 'trasig', status: 'draft', number: 0, ocr: '' });
+      const broken: unknown = { ...bad, lines: [{ ...bad.lines[0]!, vatRate: 7 }] };
+      storage.setItem('fakturafix:invoices', JSON.stringify([broken]));
+      expect(store.listInvoices()).toEqual([]);
+      expect(() => calculateTotals(store.listInvoices().flatMap((i) => i.lines))).not.toThrow();
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
     }
   });
 });
