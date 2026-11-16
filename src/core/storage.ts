@@ -1,4 +1,5 @@
 import type { Store } from './index';
+import { createOcr } from './ocr';
 import type { Customer, Invoice } from './types';
 import {
   FIRST_INVOICE_NUMBER,
@@ -158,6 +159,32 @@ function assertMayOverwrite(stored: unknown, updated: Invoice): void {
 }
 
 /**
+ * Sant när sparningen delar ut ett nummer: fakturan har ett nummer som den
+ * sparade posten med samma id inte redan har (t.ex. draft -> sent, eller en
+ * ny faktura med number > 0).
+ */
+function isAssigningNumber(stored: unknown, invoice: Invoice): boolean {
+  if (invoice.number === 0) return false;
+  return !(isRecord(stored) && stored.number === invoice.number);
+}
+
+/**
+ * Ett nytt nummer måste vara nästa lediga, räknat på lagringen som den ser ut
+ * just nu. Det hindrar två flikar (eller två Store-instanser) från att dela ut
+ * samma nummer: den som sparar sist får ett fel och får hämta ett nytt nummer.
+ */
+function assertNextFreeNumber(invoice: Invoice, lastNumber: number): void {
+  if (invoice.number !== lastNumber + 1) {
+    throw new Error(
+      `Fakturanumret ${invoice.number} är redan använt eller inte nästa i serien (nästa lediga är ${lastNumber + 1}). Försök igen.`,
+    );
+  }
+  if (invoice.ocr !== createOcr(invoice.number)) {
+    throw new Error(`OCR-numret ${invoice.ocr || '(tomt)'} stämmer inte med fakturanummer ${invoice.number}.`);
+  }
+}
+
+/**
  * Skapar ett Store som sparar JSON i webbläsarens localStorage (eller i det
  * Storage-objekt som skickas in, t.ex. i tester). Varje anrop läser direkt
  * från lagringen, så flera Store-instanser ser alltid samma data.
@@ -222,6 +249,7 @@ export function createLocalStore(storageArg?: Storage): Store {
       // med trasig form inte kan kringgå låsningen.
       const stored = readRawList(storage, KEYS.invoices).find((value) => hasId(value, invoice.id));
       if (stored !== undefined) assertMayOverwrite(stored, invoice);
+      if (isAssigningNumber(stored, invoice)) assertNextFreeNumber(invoice, lastInvoiceNumber());
       const highest = Math.max(lastInvoiceNumber(), invoice.number);
       writeJson(storage, KEYS.invoices, upsert(readRawList(storage, KEYS.invoices), invoice));
       writeJson(storage, KEYS.lastInvoiceNumber, highest);
