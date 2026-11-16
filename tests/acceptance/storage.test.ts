@@ -3,7 +3,7 @@
  * Varje test använder en egen Storage i minnet.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createLocalStore } from '../../src/core';
+import { createLocalStore, createOcr } from '../../src/core';
 import { customer, invoice, memoryStorage, settings, storageKeys } from './helpers';
 
 describe('createLocalStore: kunder', () => {
@@ -77,9 +77,9 @@ describe('createLocalStore: fakturanummer', () => {
 
   it('ger högsta numret plus 1', () => {
     const store = createLocalStore(memoryStorage());
-    store.saveInvoice(invoice({ id: 'x', number: 1005 }));
-    store.saveInvoice(invoice({ id: 'y', number: 1002 }));
-    expect(store.nextInvoiceNumber()).toBe(1006);
+    store.saveInvoice(invoice({ id: 'x', number: 1001, ocr: '100164' }));
+    store.saveInvoice(invoice({ id: 'y', number: 1002, ocr: createOcr(1002) }));
+    expect(store.nextInvoiceNumber()).toBe(1003);
   });
 });
 
