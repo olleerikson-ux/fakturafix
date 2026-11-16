@@ -7,6 +7,7 @@ const KEYS = {
   customers: `${PREFIX}customers`,
   invoices: `${PREFIX}invoices`,
   settings: `${PREFIX}settings`,
+  lastInvoiceNumber: `${PREFIX}lastInvoiceNumber`,
 } as const;
 const STORAGE_VERSION = 1;
 const FIRST_INVOICE_NUMBER = 1001;
@@ -23,8 +24,26 @@ function hasId(value: unknown): value is HasId {
   return isRecord(value) && typeof value.id === 'string';
 }
 
-/** Läser JSON. Saknad nyckel, trasig JSON eller ett fel från lagringen ger undefined. */
-function readJson(storage: Storage, key: string): unknown {
+/** Lagringen, eller undefined om den inte går att komma åt (t.ex. SecurityError). */
+type MaybeStorage = Storage | undefined;
+
+/**
+ * Hämtar det Storage-objekt som ska användas. I vissa webbläsarlägen kastar
+ * redan åtkomsten till `localStorage` ett SecurityError, så den görs här
+ * inuti try/catch i stället för i ett standardargument.
+ */
+function resolveStorage(storage: Storage | undefined): MaybeStorage {
+  if (storage) return storage;
+  try {
+    return globalThis.localStorage ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Läser JSON. Saknad nyckel, trasig JSON eller otillgänglig lagring ger undefined. */
+function readJson(storage: MaybeStorage, key: string): unknown {
+  if (!storage) return undefined;
   try {
     const raw = storage.getItem(key);
     return raw === null ? undefined : (JSON.parse(raw) as unknown);
@@ -37,13 +56,23 @@ function readJson(storage: Storage, key: string): unknown {
  * Läser en lista med poster. Allt som inte är en array behandlas som tom
  * data, och element utan sträng-id hoppas över.
  */
-function readList<T extends HasId>(storage: Storage, key: string): T[] {
+function readList<T extends HasId>(storage: MaybeStorage, key: string): T[] {
   const value = readJson(storage, key);
   if (!Array.isArray(value)) return [];
   return value.filter(hasId) as unknown as T[];
 }
 
-function writeJson(storage: Storage, key: string, value: unknown): void {
+/** Läser ett heltal. Allt annat ger undefined. */
+function readInteger(storage: MaybeStorage, key: string): number | undefined {
+  const value = readJson(storage, key);
+  return Number.isSafeInteger(value) ? (value as number) : undefined;
+}
+
+/** Skriver JSON. Kastar fel om lagringen är otillgänglig, så att gränssnittet kan visa det. */
+function writeJson(storage: MaybeStorage, key: string, value: unknown): void {
+  if (!storage) {
+    throw new Error('Lagringen är inte tillgänglig. Ändringen kunde inte sparas.');
+  }
   storage.setItem(key, JSON.stringify(value));
 }
 
@@ -53,13 +82,13 @@ function upsert<T extends HasId>(items: T[], item: T): T[] {
   return items.map((existing, i) => (i === index ? item : existing));
 }
 
-function ensureVersion(storage: Storage): void {
+function ensureVersion(storage: MaybeStorage): void {
   try {
-    if (storage.getItem(KEYS.version) === null) {
+    if (storage && storage.getItem(KEYS.version) === null) {
       writeJson(storage, KEYS.version, STORAGE_VERSION);
     }
   } catch {
-    // Lagringen kan vara otillgänglig (t.ex. privat läge). Appen ska ändå starta.
+    // Lagringen kan vara full eller spärrad. Appen ska ändå starta.
   }
 }
 
@@ -67,12 +96,28 @@ function ensureVersion(storage: Storage): void {
  * Skapar ett Store som sparar JSON i webbläsarens localStorage (eller i det
  * Storage-objekt som skickas in, t.ex. i tester). Varje anrop läser direkt
  * från lagringen, så flera Store-instanser ser alltid samma data.
+ *
+ * Om lagringen inte går att komma åt behandlas den som tom vid läsning och
+ * skrivningar kastar fel.
+ *
+ * Fakturanumren bildar en obruten serie som aldrig återanvänds: det högsta
+ * utdelade numret sparas som ett högvattenmärke, och utfärdade fakturor
+ * (status skild från "draft") kan inte raderas.
  */
-export function createLocalStore(storage: Storage = globalThis.localStorage): Store {
+export function createLocalStore(storageArg?: Storage): Store {
+  const storage = resolveStorage(storageArg);
   ensureVersion(storage);
 
   const customers = (): Customer[] => readList<Customer>(storage, KEYS.customers);
   const invoices = (): Invoice[] => readList<Invoice>(storage, KEYS.invoices);
+  const lastInvoiceNumber = (): number =>
+    Math.max(
+      FIRST_INVOICE_NUMBER - 1,
+      readInteger(storage, KEYS.lastInvoiceNumber) ?? 0,
+      ...invoices()
+        .map((invoice) => invoice.number)
+        .filter((n) => Number.isSafeInteger(n)),
+    );
 
   return {
     listCustomers: customers,
@@ -83,15 +128,22 @@ export function createLocalStore(storage: Storage = globalThis.localStorage): St
 
     listInvoices: invoices,
     getInvoice: (id) => invoices().find((invoice) => invoice.id === id),
-    saveInvoice: (invoice) => writeJson(storage, KEYS.invoices, upsert(invoices(), invoice)),
-    deleteInvoice: (id) =>
-      writeJson(storage, KEYS.invoices, invoices().filter((invoice) => invoice.id !== id)),
-    nextInvoiceNumber: () => {
-      const numbers = invoices()
-        .map((invoice) => invoice.number)
-        .filter((n) => Number.isInteger(n));
-      return Math.max(FIRST_INVOICE_NUMBER - 1, ...numbers) + 1;
+    saveInvoice: (invoice) => {
+      const highest = Math.max(lastInvoiceNumber(), invoice.number);
+      writeJson(storage, KEYS.invoices, upsert(invoices(), invoice));
+      writeJson(storage, KEYS.lastInvoiceNumber, highest);
     },
+    deleteInvoice: (id) => {
+      const existing = invoices().find((invoice) => invoice.id === id);
+      if (!existing) return;
+      if (existing.status !== 'draft') {
+        throw new Error(
+          `Faktura ${existing.number} är utfärdad och kan inte raderas. Skapa en kreditfaktura i stället.`,
+        );
+      }
+      writeJson(storage, KEYS.invoices, invoices().filter((invoice) => invoice.id !== id));
+    },
+    nextInvoiceNumber: () => lastInvoiceNumber() + 1,
 
     getSettings: () => {
       const value = readJson(storage, KEYS.settings);

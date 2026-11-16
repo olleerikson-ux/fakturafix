@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createLocalStore } from './storage';
 import type { CompanySettings, Customer, Invoice } from './types';
 
@@ -68,8 +68,40 @@ describe('createLocalStore', () => {
     expect(store.listInvoices()).toHaveLength(1);
     expect(store.getInvoice('f1')?.status).toBe('sent');
 
-    store.deleteInvoice('f1');
-    expect(store.getInvoice('f1')).toBeUndefined();
+    store.saveInvoice(invoice('f2', 1002));
+    store.deleteInvoice('f2');
+    expect(store.getInvoice('f2')).toBeUndefined();
+    expect(() => store.deleteInvoice('saknas')).not.toThrow();
+  });
+
+  it.each(['sent', 'paid'] as const)('vägrar radera en faktura med status %s', (status) => {
+    const store = createLocalStore(localStorage);
+    store.saveInvoice({ ...invoice('f1', 1001), status });
+    expect(() => store.deleteInvoice('f1')).toThrow(/kan inte raderas/);
+    expect(store.getInvoice('f1')).toBeDefined();
+  });
+
+  it('återanvänder aldrig ett fakturanummer, även när det högsta utkastet raderas', () => {
+    const store = createLocalStore(localStorage);
+    store.saveInvoice({ ...invoice('f1', 1001), status: 'sent' });
+    store.saveInvoice(invoice('f2', 1002));
+    store.deleteInvoice('f2');
+    expect(store.nextInvoiceNumber()).toBe(1003);
+    expect(localStorage.getItem('fakturafix:lastInvoiceNumber')).toBe('1002');
+    expect(createLocalStore(localStorage).nextInvoiceNumber()).toBe(1003);
+  });
+
+  it('använder det högsta av högvattenmärket och sparade nummer', () => {
+    localStorage.setItem('fakturafix:lastInvoiceNumber', '1010');
+    const store = createLocalStore(localStorage);
+    expect(store.nextInvoiceNumber()).toBe(1011);
+    store.saveInvoice(invoice('f1', 1020));
+    expect(store.nextInvoiceNumber()).toBe(1021);
+  });
+
+  it('ignorerar ett trasigt högvattenmärke', () => {
+    localStorage.setItem('fakturafix:lastInvoiceNumber', '"tusen"');
+    expect(createLocalStore(localStorage).nextInvoiceNumber()).toBe(1001);
   });
 
   it('ger 1001 som första fakturanummer och sedan högsta plus 1', () => {
@@ -117,5 +149,39 @@ describe('createLocalStore', () => {
     localStorage.setItem('fakturafix:version', '2');
     createLocalStore(localStorage);
     expect(localStorage.getItem('fakturafix:version')).toBe('2');
+  });
+});
+
+describe('createLocalStore utan tillgänglig lagring', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function blockLocalStorage(): void {
+    vi.spyOn(globalThis, 'localStorage', 'get').mockImplementation(() => {
+      throw new DOMException('Åtkomst nekad', 'SecurityError');
+    });
+  }
+
+  it('kraschar inte när localStorage kastar SecurityError', () => {
+    blockLocalStorage();
+    expect(() => createLocalStore()).not.toThrow();
+  });
+
+  it('behandlar otillgänglig lagring som tom vid läsning', () => {
+    blockLocalStorage();
+    const store = createLocalStore();
+    expect(store.listCustomers()).toEqual([]);
+    expect(store.listInvoices()).toEqual([]);
+    expect(store.getSettings()).toBeUndefined();
+    expect(store.nextInvoiceNumber()).toBe(1001);
+  });
+
+  it('kastar fel vid skrivning till otillgänglig lagring', () => {
+    blockLocalStorage();
+    const store = createLocalStore();
+    expect(() => store.saveCustomer(customer)).toThrow(/inte tillgänglig/);
+    expect(() => store.saveInvoice(invoice('f1', 1001))).toThrow(/inte tillgänglig/);
+    expect(() => store.saveSettings(settings)).toThrow(/inte tillgänglig/);
   });
 });

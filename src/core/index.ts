@@ -32,6 +32,10 @@ export interface Store {
   listInvoices(): Invoice[];
   getInvoice(id: string): Invoice | undefined;
   saveInvoice(invoice: Invoice): void;
+  /**
+   * Raderar ett utkast. Utfärdade fakturor (status skild från "draft") kan
+   * inte raderas eftersom löpnummerserien måste vara obruten. Då kastas ett fel.
+   */
   deleteInvoice(id: string): void;
   /** Nästa lediga fakturanummer (första är 1001). */
   nextInvoiceNumber(): number;
