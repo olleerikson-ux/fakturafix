@@ -69,4 +69,23 @@ describe('renderInvoice', () => {
   it('utelämnar OCR för utkast', () => {
     expect(text(settings, { ...invoice, number: 0, ocr: '', status: 'draft' })).not.toContain('OCR-nummer');
   });
+
+  it('renderar en kreditfaktura med egen rubrik, hänvisning och Att få tillbaka', () => {
+    const credit: Invoice = {
+      ...invoice,
+      id: 'c1',
+      number: 1002,
+      creditFor: 'i1',
+      ocr: createOcr(1002),
+      lines: invoice.lines.map((l) => ({ ...l, quantity: -l.quantity })),
+    };
+    const t = renderInvoice(credit, customer, settings, invoice).textContent ?? '';
+    expect(t).toContain('KREDITFAKTURA');
+    expect(t).toContain('Avser faktura nr 1001, daterad 2026-02-01');
+    expect(t).toContain('Att få tillbaka');
+    expect(t).toContain('3 338,00 kr');
+    expect(t).not.toContain('Bankgiro');
+    expect(t).not.toContain('Förfallodatum');
+    expect(t).not.toContain(createOcr(1002));
+  });
 });

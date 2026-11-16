@@ -37,18 +37,30 @@ export interface OverviewKpis {
   paidThisYear: number;
 }
 
-/** Räknar nyckeltalen (i öre). Utkast ingår inte. */
+/**
+ * Räknar nyckeltalen (i öre). Utkast ingår inte.
+ * Fakturor räknas efter sin egen status, även när de är krediterade, och en
+ * kreditfakturas negativa belopp dras av där ursprungsfakturan räknades: från
+ * betalt i år om den var betald, annars från obetalt (och förfallet om den
+ * var förfallen). En helt krediterad faktura ger därför netto noll.
+ */
 export function computeKpis(invoices: Invoice[], todayDate: string): OverviewKpis {
   const kpis: OverviewKpis = { unpaid: 0, overdue: 0, paidThisYear: 0 };
   const year = todayDate.slice(0, 4);
+  const byId = new Map(invoices.map((i) => [i.id, i]));
   for (const invoice of invoices) {
-    const status: string = displayStatus(invoice, todayDate);
+    if (invoice.status === 'draft') continue;
     const total = calculateTotals(invoice.lines).total;
+    const base = invoice.creditFor === undefined ? invoice : byId.get(invoice.creditFor);
+    const status: string = base ? displayStatus(base, todayDate) : 'unpaid';
+    const refund = invoice.creditFor !== undefined;
     if (status === 'unpaid') kpis.unpaid += total;
     else if (status === 'overdue') {
       kpis.unpaid += total;
       kpis.overdue += total;
-    } else if (status === 'paid' && (invoice.paidDate ?? '').startsWith(year)) kpis.paidThisYear += total;
+    } else if (status === 'paid' && (refund ? invoice.issueDate : (invoice.paidDate ?? '')).startsWith(year)) {
+      kpis.paidThisYear += total;
+    }
   }
   return kpis;
 }
@@ -88,7 +100,7 @@ export function overviewView(root: HTMLElement, store: Store): void {
     };
 
     const shown = invoices
-      .map((invoice) => ({ invoice, status: displayStatus(invoice, todayDate) as string }))
+      .map((invoice) => ({ invoice, status: displayStatus(invoice, todayDate, invoices) as string }))
       .filter((x) => filter === 'all' || x.status === filter)
       .sort((a, b) => (a.invoice.number || Infinity) - (b.invoice.number || Infinity) || b.invoice.createdAt.localeCompare(a.invoice.createdAt));
 
@@ -112,7 +124,7 @@ export function overviewView(root: HTMLElement, store: Store): void {
           invoice.status !== 'draft'
             ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Skriv ut ${label}`, onclick: () => print(invoice) }, 'Skriv ut')
             : '',
-          invoice.status === 'sent'
+          status === 'unpaid' || status === 'overdue'
             ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Markera ${label} som betald`, onclick: () => markPaid(invoice) }, 'Markera som betald')
             : '',
           invoice.status === 'draft'
