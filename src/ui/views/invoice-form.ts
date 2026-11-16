@@ -333,6 +333,16 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     createdAt: existing?.createdAt ?? new Date().toISOString(),
   });
 
+  /** Om fakturan finns sparad med samma status och nummer som vi försökte spara (används vid utfärdande). */
+  const isStoredAs = (invoice: Invoice): boolean => {
+    try {
+      const stored = store.getInvoice(invoice.id);
+      return stored?.status === invoice.status && stored.number === invoice.number;
+    } catch {
+      return false;
+    }
+  };
+
   const save = (mode: SaveMode) => {
     const input = readInput();
     if (showErrors(form, validateInvoice(input, mode))) {
@@ -356,16 +366,21 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       if (!window.confirm(question)) return;
     }
 
-    let invoice: Invoice;
+    let invoice: Invoice | undefined;
     try {
       // Numret hämtas först efter bekräftelsen, direkt före sparningen, så att en
       // annan flik inte hinner dela ut samma nummer medan dialogen står öppen.
       invoice = buildInvoice(input, mode, mode === 'send' ? store.nextInvoiceNumber() : 0);
       store.saveInvoice(invoice);
     } catch (error) {
-      const message = errorMessage(error, 'Fakturan kunde inte sparas.');
-      announce(/försök igen/i.test(message) ? message : `${message} Försök igen.`, 'error');
-      return;
+      // Vid utfärdande kan lagringen ha sparat fakturan trots att den kastade fel
+      // (t.ex. om bara nummerräknaren inte kunde skrivas). Då ska vyn visa den
+      // utfärdade fakturan, annars skulle ett nytt försök utfärda samma underlag igen.
+      if (mode !== 'send' || !invoice || !isStoredAs(invoice)) {
+        const message = errorMessage(error, 'Fakturan kunde inte sparas.');
+        announce(/försök igen/i.test(message) ? message : `${message} Försök igen.`, 'error');
+        return;
+      }
     }
     setHash(`#/fakturor/${invoice.id}`);
     rerender(invoice.id, {

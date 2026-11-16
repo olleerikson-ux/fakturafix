@@ -237,6 +237,22 @@ describe('invoiceFormView', () => {
     );
   });
 
+  it('visar den sparade fakturan om lagringen sparade den men ändå kastade fel', () => {
+    store.saveInvoice(draft);
+    invoiceFormView(root, store, 'f1');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const original = store.saveInvoice.bind(store);
+    vi.spyOn(store, 'saveInvoice').mockImplementation((invoice) => {
+      original(invoice);
+      throw new Error('Lagringen är inte tillgänglig.');
+    });
+    button(root, 'Markera som skickad').click();
+
+    expect(store.getInvoice('f1')).toMatchObject({ number: 1001, status: 'sent' });
+    expect(root.querySelector('h1')?.textContent).toBe('Faktura 1001');
+    expect(root.querySelector<HTMLFieldSetElement>('.invoice-content')?.disabled).toBe(true);
+  });
+
   it('skickar inte en faktura med negativt belopp', () => {
     store.saveInvoice({ ...draft, lines: [{ ...draft.lines[0]!, unitPrice: -100000 }] });
     invoiceFormView(root, store, 'f1');
