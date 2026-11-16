@@ -18,7 +18,7 @@ MVP:
 
 | Roll | Vem | Äger mappar |
 |---|---|---|
-| Ägare och styrelse | Människan | Godkänner och slår ihop alla PR:er till `main` |
+| Ägare och styrelse | Människan | Fattar beslut om pengar, juridik och inriktning. Har delegerat merge till VD |
 | VD | Claude (orkestrerande session) | `AGENTS.md`, `README.md`, `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.ts`, `tools/`, kontraktet i `src/core/types.ts` och signaturerna i `src/core/index.ts` |
 | Utvecklare 1 | Claude-agent | `src/core/**` (implementation) |
 | Utvecklare 2 | Claude-agent | `src/ui/**` |
@@ -32,7 +32,7 @@ MVP:
 2. **Rör bara filer i dina egna mappar.** Behöver du ändra något utanför dem skriver du en kommentar i din issue och väntar på VD.
 3. **Kontraktet är låst.** Typerna i `src/core/types.ts` och funktionssignaturerna i `src/core/index.ts` får bara ändras efter VD:s godkännande.
    Utvecklare 1 får ersätta stubbarnas *innehåll*, men inte deras signaturer.
-4. **Ingen slår ihop sin egen kod.** Pusha aldrig till `main`, slå aldrig ihop PR:er och force-pusha aldrig till någon annans branch.
+4. **Bara VD slår ihop PR:er**, och bara efter QA:s godkännande ("QA: godkänd"). Ägaren har gett VD det mandatet. Andra agenter pushar aldrig till `main`, slår aldrig ihop PR:er och force-pushar aldrig till någon annans branch. VD:s egna PR:er kräver också QA:s godkännande.
 5. **Inga nya beroenden** (`npm install <paket>`) utan VD:s godkännande. Fråga i din issue.
 6. **Inga hemligheter i repot.** Inga API-nycklar, tokens eller `.env`-filer.
 7. **Inga riktiga personuppgifter.** Testdata ska vara påhittad, till exempel "Testkund AB, 556000-0000".
@@ -41,7 +41,6 @@ MVP:
 
 1. Läs din issue och den här filen.
 2. Skapa en branch från `main` med namnet `<roll>/<issue-nr>-<kort-beskrivning>`, till exempel `dev1/2-moms-och-ocr` eller `qa/5-ci`.
-   *Undantag just nu:* tills PR:en med grundstrukturen är ihopslagen utgår du från branchen `grund/projektstruktur` i stället för `main`.
 3. Gör små, tydliga commits.
 4. Kör alla kontroller innan du pushar. Alla måste gå igenom:
    ```bash
@@ -49,7 +48,7 @@ MVP:
    ```
 5. Pusha och öppna en PR mot `main`. Beskrivningen ska innehålla `Closes #<issue>`, vad du har gjort, hur det är testat och eventuella frågor.
 6. QA granskar PR:en. Åtgärda synpunkterna på samma branch.
-7. Ägaren slår ihop PR:en. Rapportera sedan till VD och vänta på nästa issue.
+7. VD slår ihop PR:en när QA har godkänt den. Rapportera sedan till VD och vänta på nästa issue.
 
 ## Kodstil
 
