@@ -3,10 +3,160 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fakturafix</title>
+    <title>Fakturafix – gratis fakturaprogram för enskild firma och frilansare</title>
+    <meta
+      name="description"
+      content="Fakturafix är ett gratis fakturaprogram för enskild firma och frilansare. Skapa fakturor med rätt moms och OCR-nummer, ladda ner som PDF. Ingen inloggning, din data stannar i din webbläsare."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="sv_SE" />
+    <meta property="og:title" content="Fakturafix – gratis fakturaprogram för frilansare" />
+    <meta
+      property="og:description"
+      content="Skapa proffsiga fakturor med rätt moms och OCR-nummer. Gratis, utan inloggning."
+    />
+    <script>
+      // Gamla bokmärken som #/oversikt skickas vidare till appen med samma hash.
+      if (location.hash.indexOf('#/') === 0) location.replace('app/' + location.hash);
+    </script>
+    <style>
+      :root {
+        --bg: #f3f4f6;
+        --surface: #ffffff;
+        --text: #1b1f24;
+        --muted: #566070;
+        --accent: #2f5577;
+        --on-accent: #ffffff;
+        --border: #d5d9e0;
+        --header-bg: #1f2d3d;
+        --header-text: #ffffff;
+        --header-muted: #c9d3df;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #151a21;
+          --surface: #1e252e;
+          --text: #e4e8ed;
+          --muted: #a0aab8;
+          --accent: #8db4d9;
+          --on-accent: #0f1a26;
+          --border: #333d4a;
+          --header-bg: #10151c;
+          --header-text: #e4e8ed;
+          --header-muted: #a0aab8;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: var(--text);
+        background: var(--bg);
+      }
+      a { color: var(--accent); }
+      a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+      header.site { background: var(--header-bg); color: var(--header-text); }
+      header.site .wrap { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; padding-bottom: 12px; }
+      .brand { font-weight: 600; font-size: 1.15rem; color: var(--header-text); text-decoration: none; }
+      header.site a.link { color: var(--header-muted); text-decoration: none; }
+      header.site a:focus-visible { outline-color: var(--header-text); }
+      .hero { background: var(--header-bg); color: var(--header-text); padding: 48px 0 64px; }
+      .hero h1 { font-size: clamp(1.9rem, 5vw, 2.8rem); line-height: 1.2; margin: 0 0 16px; max-width: 20em; }
+      .hero p { font-size: 1.15rem; color: var(--header-muted); max-width: 36em; margin: 0 0 24px; }
+      .btn { display: inline-block; padding: 12px 24px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; }
+      .btn:hover { filter: brightness(0.88); }
+      .hero .btn { background: #ffffff; color: #1f2d3d; }
+      .hero .btn:focus-visible { outline-color: #ffffff; }
+      .hero .note { font-size: 0.9rem; margin: 12px 0 0; }
+      section { padding: 48px 0 0; }
+      h2 { font-size: 1.6rem; margin: 0 0 24px; line-height: 1.25; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
+      .card h3 { margin: 0 0 8px; font-size: 1.1rem; }
+      .card p { margin: 0; color: var(--muted); }
+      ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+      ol.steps li { counter-increment: step; }
+      ol.steps li::before { content: counter(step); display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 600; margin-bottom: 8px; }
+      details { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+      summary { cursor: pointer; font-weight: 600; }
+      details p { margin: 8px 0 0; color: var(--muted); }
+      .cta { text-align: center; padding-bottom: 48px; }
+      footer { border-top: 1px solid var(--border); padding: 24px 0; color: var(--muted); font-size: 0.9rem; }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="./">Fakturafix</a>
+        <a class="link" href="app/">Öppna appen</a>
+      </div>
+    </header>
+    <main>
+      <div class="hero">
+        <div class="wrap">
+          <h1>Fakturor som blir rätt, utan krångel</h1>
+          <p>
+            Fakturafix är ett gratis fakturaprogram för enskild firma och frilansare. Skapa en faktura med rätt moms
+            och OCR-nummer och ladda ner den som PDF på några minuter.
+          </p>
+          <a class="btn" href="app/">Kom igång gratis</a>
+          <p class="note">Ingen registrering och ingen inloggning.</p>
+        </div>
+      </div>
+
+      <section class="wrap" aria-labelledby="fordelar">
+        <h2 id="fordelar">Gjort för dig som fakturerar själv</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Rätt moms och OCR automatiskt</h3>
+            <p>Välj 25, 12, 6 eller 0 % moms. Fakturafix räknar ut summorna, avrundar till hela kronor och skapar ett OCR-nummer.</p>
+          </div>
+          <div class="card">
+            <h3>Proffsig PDF på sekunder</h3>
+            <p>Fakturan får svensk standardlayout med bankgiro, org.nr och F-skatt. Skriv ut den eller spara den som PDF.</p>
+          </div>
+          <div class="card">
+            <h3>Ingen inloggning, din data stannar hos dig</h3>
+            <p>Allt sparas i din egen webbläsare. Det finns inget konto och ingen server som lagrar dina kunder eller fakturor.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="wrap" aria-labelledby="sa-funkar-det">
+        <h2 id="sa-funkar-det">Så funkar det</h2>
+        <ol class="steps">
+          <li><h3>Fyll i ditt företag</h3><p>Namn, org.nr och bankgiro. Det gör du en gång.</p></li>
+          <li><h3>Lägg till en kund och skapa fakturan</h3><p>Skriv raderna, välj moms och förfallodatum.</p></li>
+          <li><h3>Skicka och följ upp</h3><p>Spara som PDF och se i översikten vad som är betalt, obetalt eller förfallet.</p></li>
+        </ol>
+      </section>
+
+      <section class="wrap" aria-labelledby="fragor">
+        <h2 id="fragor">Vanliga frågor</h2>
+        <details>
+          <summary>Är det gratis?</summary>
+          <p>Ja. Du kan skapa fakturor, hantera kunder och spara PDF utan att betala och utan att registrera dig.</p>
+        </details>
+        <details>
+          <summary>Var sparas min data?</summary>
+          <p>Lokalt i din webbläsare på din egen dator. Ingenting skickas till någon server. Det betyder också att du bör ta en säkerhetskopia av dina uppgifter regelbundet, och att datan inte följer med till en annan webbläsare eller enhet.</p>
+        </details>
+        <details>
+          <summary>Uppfyller fakturorna lagkraven?</summary>
+          <p>Fakturorna innehåller de uppgifter som en svensk faktura normalt ska ha: unikt löpnummer, datum, köpare, specificerade rader, moms per sats, org.nr och, om du har det, F-skatt. Du ansvarar själv för att uppgifterna är rätt. Fakturafix ersätter inte rådgivning från en revisor eller Skatteverket.</p>
+        </details>
+      </section>
+
+      <section class="wrap cta" aria-labelledby="start">
+        <h2 id="start">Redo att skicka din första faktura?</h2>
+        <a class="btn" href="app/">Kom igång gratis</a>
+      </section>
+    </main>
+    <footer>
+      <div class="wrap">Fakturafix. En enkel fakturering för svenska frilansare och enskilda firmor.</div>
+    </footer>
   </body>
 </html>
