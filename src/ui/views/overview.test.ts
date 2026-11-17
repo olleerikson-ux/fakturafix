@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Invoice, Store } from '../../core/index';
 import { createMemoryStore } from '../test-utils';
-import { computeKpis, overviewView, statusLabel } from './overview';
+import { computeKpis, matchesSearch, overviewView, statusLabel } from './overview';
 
 function invoice(id: string, over: Partial<Invoice>): Invoice {
   return {
@@ -83,5 +83,39 @@ describe('overviewView', () => {
     overviewView(root, store);
     [...root.querySelectorAll('button')].find((b) => b.textContent === 'Markera som betald')?.click();
     expect(root.querySelector('[role=status]')?.textContent).toContain('Kunde inte spara');
+  });
+});
+
+describe('sökning i översikten', () => {
+  const inv = invoice('a', { number: 1042, lines: [{ id: 'l', description: 'Tjänst', quantity: 1, unitPrice: 1250000, vatRate: 25 }] });
+
+  it('matchar kundnamn, fakturanummer och belopp', () => {
+    expect(matchesSearch(inv, 'Testkund AB', 'testkund')).toBe(true);
+    expect(matchesSearch(inv, 'Testkund AB', '1042')).toBe(true);
+    expect(matchesSearch(inv, 'Testkund AB', '#1042')).toBe(true);
+    expect(matchesSearch(inv, 'Testkund AB', '15 625')).toBe(true);
+    expect(matchesSearch(inv, 'Testkund AB', '15625,00')).toBe(true);
+    expect(matchesSearch(inv, 'Testkund AB', 'finns inte')).toBe(false);
+    expect(matchesSearch(inv, 'Testkund AB', '  ')).toBe(true);
+  });
+
+  it('kombineras med statusfiltret i vyn', () => {
+    const store = createMemoryStore();
+    store.saveCustomer({ id: 'k1', name: 'Testkund AB', address: { street: 'G 1', postalCode: '123 45', city: 'S' }, createdAt: '2026-01-01T00:00:00.000Z' });
+    store.saveCustomer({ id: 'k2', name: 'Annan AB', address: { street: 'G 1', postalCode: '123 45', city: 'S' }, createdAt: '2026-01-01T00:00:00.000Z' });
+    store.saveInvoice(invoice('a', { number: 1001, customerId: 'k1', status: 'paid', paidDate: '2026-03-01' }));
+    store.saveInvoice(invoice('b', { number: 1002, customerId: 'k2', status: 'paid', paidDate: '2026-03-01' }));
+    const root = document.createElement('div');
+    overviewView(root, store);
+    const search = root.querySelector<HTMLInputElement>('#invoice-search');
+    if (!search) throw new Error('Sökfältet saknas');
+    search.value = 'annan';
+    search.dispatchEvent(new Event('input'));
+    const rows = () => root.querySelectorAll('tbody tr').length;
+    expect(rows()).toBe(1);
+    const select = root.querySelector('select') as HTMLSelectElement;
+    select.value = 'draft';
+    select.dispatchEvent(new Event('change'));
+    expect(root.textContent).toContain('Inga fakturor matchar sökningen');
   });
 });

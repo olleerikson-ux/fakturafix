@@ -686,3 +686,26 @@ input.visually-hidden:focus-visible + .file-button {
 .backup-reminder {
   margin: 0 0 var(--space-4);
 }
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.filter input[type='search'] {
+  flex: 1 1 14rem;
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+}
+
+.filter input[type='search']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

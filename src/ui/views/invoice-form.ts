@@ -72,6 +72,22 @@ export function parseQuantity(value: string, credit = false): number | null {
   return quantity > 0 ? quantity : null;
 }
 
+/** Ett nytt utkast med samma kund, rader och meddelande, med dagens datum och nytt förfallodatum. */
+export function copyAsDraft(source: Invoice, todayDate: IsoDate, termsDays: number): Invoice {
+  return {
+    id: newId(),
+    number: 0,
+    customerId: source.customerId,
+    issueDate: todayDate,
+    dueDate: addDays(todayDate, termsDays),
+    lines: source.lines.map((line) => ({ ...line, id: newId() })),
+    ocr: '',
+    status: 'draft',
+    ...(source.notes !== undefined ? { notes: source.notes } : {}),
+    createdAt: new Date().toISOString(),
+  };
+}
+
 /** Öre till redigerbar text, t.ex. 125000 -> "1250,00". Bara heltalsräkning. */
 export function oreToInput(ore: number): string {
   const abs = Math.abs(ore);
@@ -455,14 +471,30 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     }
   };
 
+  const copy = () => {
+    if (!existing) return;
+    try {
+      const draft = copyAsDraft(existing, today(), termsDays);
+      store.saveInvoice(draft);
+      setHash(`#/fakturor/${draft.id}`);
+      rerender(draft.id, { text: 'Ett nytt utkast är skapat som en kopia. Nummer och OCR delas ut när du markerar det som skickat.', kind: 'ok' });
+    } catch (error) {
+      announce(errorMessage(error, 'Kopian kunde inte skapas. Försök igen.'), 'error');
+    }
+  };
+  const copyButton =
+    existing && !isCreditNote ? [h('button', { type: 'button', class: 'btn-secondary', onclick: copy }, 'Kopiera till ny faktura')] : [];
+
   const actions = issued
     ? [
         h('button', { type: 'button', class: 'btn-primary', onclick: printNow }, 'Skriv ut'),
+        ...copyButton,
         ...(canCredit ? [h('button', { type: 'button', class: 'btn-secondary', onclick: credit }, 'Kreditera')] : []),
       ]
     : [
         h('button', { type: 'button', class: 'btn-secondary', onclick: () => save('draft') }, 'Spara utkast'),
         h('button', { type: 'button', class: 'btn-primary', onclick: () => save('send') }, 'Markera som skickad'),
+        ...copyButton,
         ...(existing ? [h('button', { type: 'button', class: 'btn-danger', onclick: removeDraft }, 'Radera utkast')] : []),
       ];
 

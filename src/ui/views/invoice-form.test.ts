@@ -342,6 +342,25 @@ describe('invoiceFormView', () => {
     expect([...root.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Kreditera');
   });
 
+  it('Kopiera till ny faktura skapar ett utkast med samma kund, rader och meddelande', () => {
+    store.saveInvoice({ ...draft, number: 1001, ocr: '100164', status: 'sent', notes: 'Tack!' });
+    store.saveSettings(settings);
+    invoiceFormView(root, store, 'f1');
+    button(root, 'Kopiera till ny faktura').click();
+
+    const copy = store.listInvoices().find((i) => i.id !== 'f1');
+    expect(copy?.status).toBe('draft');
+    expect(copy?.number).toBe(0);
+    expect(copy?.ocr).toBe('');
+    expect(copy?.customerId).toBe('k1');
+    expect(copy?.notes).toBe('Tack!');
+    expect(copy?.issueDate).toBe(today());
+    expect(copy?.dueDate).toBe(addDays(today(), 20));
+    expect(copy?.lines[0]?.description).toBe('Konsulttimmar');
+    expect(copy?.lines[0]?.id).not.toBe('r1');
+    expect(root.querySelector('h1')?.textContent).toBe('Redigera utkast');
+  });
+
   it('visar en utfärdad faktura skrivskyddad', () => {
     store.saveInvoice({ ...draft, number: 1001, ocr: '100164', status: 'sent' });
     invoiceFormView(root, store, 'f1');
@@ -349,7 +368,7 @@ describe('invoiceFormView', () => {
     expect(root.querySelector('h1')?.textContent).toBe('Faktura 1001');
     expect(root.textContent).toContain('kreditfaktura');
     expect(root.querySelector<HTMLFieldSetElement>('.invoice-content')?.disabled).toBe(true);
-    expect([...root.querySelectorAll('.form-actions button')].map((b) => b.textContent)).toEqual(['Skriv ut', 'Kreditera']);
+    expect([...root.querySelectorAll('.form-actions button')].map((b) => b.textContent)).toEqual(['Skriv ut', 'Kopiera till ny faktura', 'Kreditera']);
     expect(totalsText(root)).toContain(formatSek(187500));
   });
 
