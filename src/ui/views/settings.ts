@@ -1,7 +1,7 @@
 /**
  * Företagsinställningar (#/installningar): säljarens uppgifter på fakturan.
  */
-import type { CompanySettings, Store } from '../../core/index';
+import { DEFAULT_VAT_EXEMPT_TEXT, type CompanySettings, type Store } from '../../core/index';
 import { h } from '../dom';
 import { backupSection } from './backup-section';
 import {
@@ -19,6 +19,8 @@ import {
 } from '../form';
 
 const ID_PREFIX = 'inst';
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml'];
+const MAX_LOGO_BYTES = 200_000;
 export const DEFAULT_PAYMENT_TERMS_DAYS = 30;
 
 /** Värdena i inställningsformuläret innan de blir CompanySettings. */
@@ -34,6 +36,8 @@ export interface SettingsInput {
   bankgiro: string;
   plusgiro: string;
   fSkatt: boolean;
+  vatExempt: boolean;
+  vatExemptText: string;
   paymentTermsDays: string;
   lateInterestPercent: string;
 }
@@ -79,13 +83,15 @@ function readSettingsInput(form: HTMLFormElement): SettingsInput {
     bankgiro: readText(form, 'bankgiro'),
     plusgiro: readText(form, 'plusgiro'),
     fSkatt: readChecked(form, 'fSkatt'),
+    vatExempt: readChecked(form, 'vatExempt'),
+    vatExemptText: readText(form, 'vatExemptText'),
     paymentTermsDays: readText(form, 'paymentTermsDays'),
     lateInterestPercent: readText(form, 'lateInterestPercent'),
   };
 }
 
 /** Förutsätter att indata är validerad. Land saknas i formuläret och behålls från tidigare. */
-function toSettings(input: SettingsInput, previous: CompanySettings | undefined): CompanySettings {
+function toSettings(input: SettingsInput, previous: CompanySettings | undefined, logoDataUrl: string | undefined): CompanySettings {
   return {
     name: input.name,
     orgNumber: input.orgNumber,
@@ -101,6 +107,8 @@ function toSettings(input: SettingsInput, previous: CompanySettings | undefined)
     bankgiro: optional(input.bankgiro),
     plusgiro: optional(input.plusgiro),
     fSkatt: input.fSkatt,
+    ...(input.vatExempt ? { vatExempt: true, vatExemptText: optional(input.vatExemptText) } : {}),
+    ...(logoDataUrl !== undefined ? { logoDataUrl } : {}),
     paymentTermsDays: parseWholeNumber(input.paymentTermsDays) ?? DEFAULT_PAYMENT_TERMS_DAYS,
     lateInterestPercent: parsePercent(input.lateInterestPercent) ?? undefined,
   };
@@ -112,9 +120,69 @@ function formatPercent(value: number | undefined): string | undefined {
 
 export function settingsView(root: HTMLElement, store: Store, notice?: string): void {
   const s = store.getSettings();
+  let logo = s?.logoDataUrl;
   const field = (spec: Parameters<typeof textField>[1]) => textField(ID_PREFIX, spec);
   const status = h('div', { class: 'status', role: 'status', 'aria-live': 'polite' });
   if (notice) status.append(h('p', { class: 'notice notice-ok' }, notice));
+
+  const logoPreview = h('div', { class: 'logo-preview' });
+  const logoMessage = h('p', { class: 'hint', 'aria-live': 'polite' });
+  const drawLogo = () => {
+    if (logo) {
+      const img = document.createElement('img');
+      img.src = logo;
+      img.alt = 'Din logotyp';
+      logoPreview.replaceChildren(img);
+    } else {
+      logoPreview.replaceChildren(h('span', { class: 'hint' }, 'Ingen logotyp vald.'));
+    }
+  };
+  const logoInput = h('input', { type: 'file', id: 'inst-logo', accept: 'image/png,image/jpeg,image/svg+xml' });
+  logoInput.addEventListener('change', () => {
+    const file = logoInput.files?.[0];
+    if (!file) return;
+    if (!LOGO_TYPES.includes(file.type)) {
+      logoMessage.textContent = 'Logotypen måste vara en PNG-, JPG- eller SVG-fil.';
+    } else if (file.size > MAX_LOGO_BYTES) {
+      logoMessage.textContent = 'Logotypen är för stor. Den får vara högst 200 kB.';
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => {
+        logo = String(reader.result);
+        drawLogo();
+        logoMessage.textContent = 'Spara inställningarna för att behålla logotypen.';
+      };
+      reader.onerror = () => {
+        logoMessage.textContent = 'Filen kunde inte läsas.';
+      };
+      reader.readAsDataURL(file);
+    }
+    logoInput.value = '';
+  });
+  const removeLogo = h(
+    'button',
+    {
+      type: 'button',
+      class: 'btn-secondary',
+      onclick: () => {
+        logo = undefined;
+        drawLogo();
+        logoMessage.textContent = 'Spara inställningarna för att ta bort logotypen.';
+      },
+    },
+    'Ta bort logotyp',
+  );
+  const logoFieldset = () =>
+    h(
+      'fieldset',
+      {},
+      h('legend', {}, 'Logotyp'),
+      h('div', { class: 'field' }, h('label', { for: 'inst-logo' }, 'Ladda upp logotyp (PNG, JPG eller SVG, högst 200 kB)'), logoInput),
+      logoPreview,
+      h('div', { class: 'form-actions' }, removeLogo),
+      logoMessage,
+    );
+  drawLogo();
 
   const form = h(
     'form',
@@ -127,7 +195,15 @@ export function settingsView(root: HTMLElement, store: Store, notice?: string): 
       field({ name: 'orgNumber', label: 'Org.nr', value: s?.orgNumber, required: true, hint: 'T.ex. 556000-0000' }),
       field({ name: 'vatNumber', label: 'Momsregistreringsnummer', value: s?.vatNumber, hint: 'T.ex. SE556000000001' }),
       checkboxField(ID_PREFIX, 'fSkatt', 'Godkänd för F-skatt', s?.fSkatt ?? false),
+      checkboxField(ID_PREFIX, 'vatExempt', 'Mitt företag är momsbefriat (omsättning under 120 000 kr/år)', s?.vatExempt ?? false),
+      field({
+        name: 'vatExemptText',
+        label: 'Text på momsbefriade fakturor',
+        value: s?.vatExemptText ?? DEFAULT_VAT_EXEMPT_TEXT,
+        hint: 'Skrivs ut i stället för momsraderna. Kontrollera formuleringen med Skatteverket.',
+      }),
     ),
+    logoFieldset(),
     h(
       'fieldset',
       {},
@@ -177,7 +253,7 @@ export function settingsView(root: HTMLElement, store: Store, notice?: string): 
       return;
     }
     try {
-      store.saveSettings(toSettings(input, store.getSettings()));
+      store.saveSettings(toSettings(input, store.getSettings(), logo));
     } catch {
       status.replaceChildren(
         h('p', { class: 'notice notice-error' }, `Kunde inte spara inställningarna. ${STORAGE_ERROR_HINT}`),

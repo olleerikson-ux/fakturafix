@@ -196,6 +196,21 @@ describe('invoiceFormView', () => {
     expect(document.activeElement).toBe(control(root, 'customerId'));
   });
 
+  it('momsbefriat företag: 0 % är låst och fakturan utfärdas med vatExempt', () => {
+    store.saveSettings({ ...settings, vatExempt: true });
+    store.saveInvoice(draft);
+    invoiceFormView(root, store, 'f1');
+    const vat = control(root, 'line-r1-vatRate') as HTMLSelectElement;
+    expect([...vat.options].map((o) => o.value)).toEqual(['0']);
+    expect(root.textContent).toContain('momsbefriat');
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    button(root, 'Markera som skickad').click();
+    const stored = store.getInvoice('f1');
+    expect(stored?.vatExempt).toBe(true);
+    expect(stored?.lines.every((l) => l.vatRate === 0)).toBe(true);
+  });
+
   it('delar ut fakturanummer och OCR när fakturan markeras som skickad', () => {
     store.saveInvoice(draft);
     invoiceFormView(root, store, 'f1');
