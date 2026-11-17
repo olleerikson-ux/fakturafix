@@ -143,6 +143,9 @@ export function overviewView(root: HTMLElement, store: Store): void {
           invoice.status !== 'draft'
             ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Skicka ${label} med e-post`, onclick: () => openEmailDialog(store, invoice.id, render) }, 'Skicka med e-post')
             : '',
+          status === 'overdue'
+            ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Skicka påminnelse för ${label}`, onclick: () => openEmailDialog(store, invoice.id, render, undefined, 'reminder') }, 'Skicka påminnelse')
+            : '',
           status === 'unpaid' || status === 'overdue'
             ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Markera ${label} som betald`, onclick: () => markPaid(invoice) }, 'Markera som betald')
             : '',

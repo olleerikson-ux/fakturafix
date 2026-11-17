@@ -1,10 +1,13 @@
 /** Dialogen "Skicka med e-post": spara PDF och öppna mejlprogrammet med texten ifylld. */
 import type { Store } from '../core/index';
 import { today } from '../core/index';
-import { printInvoice } from '../print/print';
-import { buildMailto, markEmailed } from './email';
+import { printInvoice, printReminder } from '../print/print';
+import { buildMailto, buildReminderMailto, markEmailed, markReminded } from './email';
 import { h } from './dom';
 import { openModal } from './modal';
+
+export const REMINDER_INSTRUCTION =
+  '1. Spara påminnelsen som PDF (Skriv ut → Spara som PDF). 2. Ditt mejlprogram öppnas med texten ifylld. Bifoga PDF:en och skicka.';
 
 export const EMAIL_INSTRUCTION =
   '1. Spara fakturan som PDF (Skriv ut → Spara som PDF). 2. Ditt mejlprogram öppnas med texten ifylld. Bifoga PDF:en och skicka.';
@@ -19,7 +22,9 @@ export function openEmailDialog(
   invoiceId: string,
   onSent: () => void = () => undefined,
   open: (url: string) => void = openMailProgram,
+  kind: 'invoice' | 'reminder' = 'invoice',
 ): void {
+  const reminder = kind === 'reminder';
   const message = h('p', { class: 'notice notice-error', hidden: true, role: 'alert' });
   const fail = (text: string) => {
     message.textContent = text;
@@ -27,7 +32,7 @@ export function openEmailDialog(
   };
 
   const savePdf = () => {
-    const problem = printInvoice(store, invoiceId);
+    const problem = reminder ? printReminder(store, invoiceId) : printInvoice(store, invoiceId);
     if (problem) fail(problem);
   };
 
@@ -38,8 +43,15 @@ export function openEmailDialog(
     if (!invoice || !customer) return fail('Fakturan eller kunden finns inte.');
     if (!settings) return fail('Fyll i dina företagsuppgifter under Inställningar först.');
     const original = invoice.creditFor ? store.getInvoice(invoice.creditFor) : undefined;
-    markEmailed(invoice.id, today());
-    open(buildMailto(invoice, customer, settings, original));
+    let url: string;
+    try {
+      url = reminder ? buildReminderMailto(invoice, customer, settings, today()) : buildMailto(invoice, customer, settings, original);
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : 'Mejlet kunde inte skapas.');
+    }
+    if (reminder) markReminded(invoice.id, today());
+    else markEmailed(invoice.id, today());
+    open(url);
     onSent();
     modal.close();
   };
@@ -47,8 +59,8 @@ export function openEmailDialog(
   const first = h('button', { type: 'button', class: 'btn-secondary', onclick: savePdf }, 'Spara PDF');
   const modal = openModal(
     [
-      h('h2', { id: 'email-title' }, 'Skicka med e-post'),
-      h('p', {}, EMAIL_INSTRUCTION),
+      h('h2', { id: 'email-title' }, reminder ? 'Skicka påminnelse' : 'Skicka med e-post'),
+      h('p', {}, reminder ? REMINDER_INSTRUCTION : EMAIL_INSTRUCTION),
       message,
       h(
         'div',

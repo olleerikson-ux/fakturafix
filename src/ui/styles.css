@@ -808,3 +808,21 @@ input.visually-hidden:focus-visible + .file-button {
   box-shadow: var(--shadow-2);
   z-index: 90;
 }
+
+.export-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.export-range input {
+  flex: 1 1 10rem;
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+}

@@ -163,3 +163,8 @@
   font-style: italic;
   padding: 2pt 6pt;
 }
+
+.invoice-print .inv-reminder-text {
+  margin: 0 0 16pt;
+  font-size: 11pt;
+}
