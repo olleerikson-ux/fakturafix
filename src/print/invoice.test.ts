@@ -106,4 +106,13 @@ describe('renderInvoice', () => {
     expect(t).not.toContain('SE556000000001');
     expect(t).toContain('SE556111111101');
   });
+
+  it('omvänd skattskyldighet: texten ersätter momsraderna och båda momsnumren visas', () => {
+    const zero: Invoice = { ...invoice, reverseCharge: true, lines: invoice.lines.map((l) => ({ ...l, vatRate: 0 })) };
+    const t = renderInvoice(zero, customer, settings).textContent ?? '';
+    expect(t).toContain('Omvänd skattskyldighet');
+    expect(t).not.toContain('Moms 25');
+    expect(t).toContain('SE556000000001');
+    expect(t).toContain('SE556111111101');
+  });
 });

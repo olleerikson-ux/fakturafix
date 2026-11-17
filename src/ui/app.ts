@@ -5,6 +5,7 @@
  */
 import type { Store } from '../core/index';
 import { h } from './dom';
+import { articlesView } from './views/articles';
 import { customersView } from './views/customers';
 import { overviewView } from './views/overview';
 import { invoiceFormView } from './views/invoice-form';
@@ -25,6 +26,7 @@ const routes: Route[] = [
   { path: '/oversikt', label: 'Översikt', view: overviewView },
   { path: '/fakturor/ny', label: 'Ny faktura', view: (root, store) => invoiceFormView(root, store) },
   { path: '/kunder', label: 'Kunder', view: customersView },
+  { path: '/artiklar', label: 'Artiklar', view: articlesView },
   { path: '/installningar', label: 'Inställningar', view: settingsView },
 ];
 

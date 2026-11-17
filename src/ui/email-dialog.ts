@@ -4,6 +4,7 @@ import { today } from '../core/index';
 import { printInvoice } from '../print/print';
 import { buildMailto, markEmailed } from './email';
 import { h } from './dom';
+import { openModal } from './modal';
 
 export const EMAIL_INSTRUCTION =
   '1. Spara fakturan som PDF (Skriv ut → Spara som PDF). 2. Ditt mejlprogram öppnas med texten ifylld. Bifoga PDF:en och skicka.';
@@ -19,20 +20,10 @@ export function openEmailDialog(
   onSent: () => void = () => undefined,
   open: (url: string) => void = openMailProgram,
 ): void {
-  const previouslyFocused = document.activeElement;
   const message = h('p', { class: 'notice notice-error', hidden: true, role: 'alert' });
   const fail = (text: string) => {
     message.textContent = text;
     message.hidden = false;
-  };
-
-  const close = () => {
-    overlay.remove();
-    document.removeEventListener('keydown', onKey);
-    if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
-  };
-  const onKey = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') close();
   };
 
   const savePdf = () => {
@@ -50,16 +41,12 @@ export function openEmailDialog(
     markEmailed(invoice.id, today());
     open(buildMailto(invoice, customer, settings, original));
     onSent();
-    close();
+    modal.close();
   };
 
   const first = h('button', { type: 'button', class: 'btn-secondary', onclick: savePdf }, 'Spara PDF');
-  const overlay = h(
-    'div',
-    { class: 'modal-overlay' },
-    h(
-      'div',
-      { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'email-title' },
+  const modal = openModal(
+    [
       h('h2', { id: 'email-title' }, 'Skicka med e-post'),
       h('p', {}, EMAIL_INSTRUCTION),
       message,
@@ -68,14 +55,10 @@ export function openEmailDialog(
         { class: 'form-actions' },
         first,
         h('button', { type: 'button', class: 'btn-primary', onclick: openMail }, 'Öppna mejlprogrammet'),
-        h('button', { type: 'button', class: 'btn-secondary', onclick: close }, 'Avbryt'),
+        h('button', { type: 'button', class: 'btn-secondary', onclick: () => modal.close() }, 'Avbryt'),
       ),
-    ),
+    ],
+    'email-title',
+    () => first,
   );
-  overlay.addEventListener('click', (event) => {
-    if (event.target === overlay) close();
-  });
-  document.addEventListener('keydown', onKey);
-  document.body.append(overlay);
-  first.focus();
 }

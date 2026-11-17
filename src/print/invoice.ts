@@ -5,6 +5,7 @@
 import {
   calculateTotals,
   DEFAULT_VAT_EXEMPT_TEXT,
+  REVERSE_CHARGE_TEXT,
   formatSek,
   lineNet,
   type Address,
@@ -88,7 +89,13 @@ export function renderInvoice(
     el(
       'header',
       'inv-header',
-      el('div', 'inv-seller', ...logoElement(settings), el('strong', 'inv-seller-name', settings.name)),
+      el(
+        'div',
+        'inv-seller',
+        ...logoElement(settings),
+        el('strong', 'inv-seller-name', settings.name),
+        ...(invoice.reverseCharge && settings.vatNumber ? [el('div', 'inv-small', `Momsnr: ${settings.vatNumber}`)] : []),
+      ),
       el('div', 'inv-title', el('h1', undefined, isCredit ? 'KREDITFAKTURA' : 'FAKTURA'), meta),
     ),
   );
@@ -130,8 +137,11 @@ export function renderInvoice(
   const sumRow = (label: string, value: string, className?: string) =>
     el('tr', className, el('th', undefined, label), el('td', 'num', value));
   const exempt = invoice.vatExempt === true;
-  const vatRows = exempt
-    ? [vatExemptRow(settings.vatExemptText || DEFAULT_VAT_EXEMPT_TEXT)]
+  const reverse = invoice.reverseCharge === true;
+  const vatRows = reverse
+    ? [vatExemptRow(REVERSE_CHARGE_TEXT)]
+    : exempt
+      ? [vatExemptRow(settings.vatExemptText || DEFAULT_VAT_EXEMPT_TEXT)]
     : Object.entries(totals.vatByRate).map(([rate, amount]) => sumRow(`Moms ${rate} %`, formatSek(amount)));
   root.append(
     el(

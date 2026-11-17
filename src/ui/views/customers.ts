@@ -4,12 +4,14 @@
 import { newId, type Customer, type Store } from '../../core/index';
 import { h } from '../dom';
 import {
+  checkboxField,
   type FieldErrors,
   formatPostalCode,
   isSwedishCountry,
   isValidEmail,
   isValidPostalCode,
   optional,
+  readChecked,
   readText,
   showErrors,
   STORAGE_ERROR_HINT,
@@ -25,6 +27,7 @@ export interface CustomerInput {
   vatNumber: string;
   email: string;
   reference: string;
+  reverseCharge?: boolean;
   street: string;
   postalCode: string;
   city: string;
@@ -39,6 +42,9 @@ export function validateCustomer(input: CustomerInput): FieldErrors {
   if (!input.postalCode) errors.postalCode = 'Ange postnummer.';
   else if (isSwedishCountry(input.country) && !isValidPostalCode(input.postalCode)) errors.postalCode = 'Svenska postnummer ska vara 5 siffror, t.ex. 123 45. Fyll i Land för utländska adresser.';
   if (!input.city) errors.city = 'Ange ort.';
+  if (input.reverseCharge && !input.vatNumber) {
+    errors.vatNumber = 'Omvänd skattskyldighet kräver kundens momsregistreringsnummer.';
+  }
   if (input.email && !isValidEmail(input.email)) errors.email = 'Ange en giltig e-postadress.';
   return errors;
 }
@@ -50,6 +56,7 @@ function readCustomerInput(form: HTMLFormElement): CustomerInput {
     vatNumber: readText(form, 'vatNumber'),
     email: readText(form, 'email'),
     reference: readText(form, 'reference'),
+    reverseCharge: readChecked(form, 'reverseCharge'),
     street: readText(form, 'street'),
     postalCode: readText(form, 'postalCode'),
     city: readText(form, 'city'),
@@ -65,6 +72,7 @@ function toCustomer(input: CustomerInput, existing: Customer | undefined): Custo
     vatNumber: optional(input.vatNumber),
     email: optional(input.email),
     reference: optional(input.reference),
+    ...(input.reverseCharge ? { reverseCharge: true } : {}),
     address: {
       street: input.street,
       postalCode: isSwedishCountry(input.country) ? formatPostalCode(input.postalCode) : input.postalCode,
@@ -193,6 +201,8 @@ export function customersView(root: HTMLElement, store: Store): void {
         field({ name: 'vatNumber', label: 'Momsregistreringsnummer', value: c?.vatNumber, hint: 'T.ex. SE556000000001' }),
         field({ name: 'email', label: 'E-post', type: 'email', value: c?.email, autocomplete: 'email' }),
         field({ name: 'reference', label: 'Er referens', value: c?.reference }),
+        checkboxField(ID_PREFIX, 'reverseCharge', 'Omvänd skattskyldighet (företag i annat EU-land)', c?.reverseCharge ?? false),
+        h('p', { class: 'hint' }, 'Fakturor till kunden får då 0 % moms och texten "Omvänd skattskyldighet". Kräver kundens momsregistreringsnummer.'),
       ),
       h(
         'fieldset',

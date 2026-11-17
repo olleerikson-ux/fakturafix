@@ -246,3 +246,15 @@ describe('validateCustomer', () => {
     expect(validateCustomer({ ...valid, email: 'inte-en-adress' })).toHaveProperty('email');
   });
 });
+
+describe('omvänd skattskyldighet i kundformuläret', () => {
+  it('kräver momsnummer', () => {
+    const input: CustomerInput = {
+      name: 'Testkund AB', orgNumber: '', vatNumber: '', email: '', reference: '', reverseCharge: true,
+      street: 'Gatan 1', postalCode: '12345', city: 'Stad', country: '',
+    };
+    expect(validateCustomer(input)).toHaveProperty('vatNumber');
+    expect(validateCustomer({ ...input, vatNumber: 'SE556000000001' })).toEqual({});
+    expect(validateCustomer({ ...input, reverseCharge: false })).toEqual({});
+  });
+});

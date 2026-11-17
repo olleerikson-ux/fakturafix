@@ -113,4 +113,23 @@ describe('mejlat-datum och dialog', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(document.querySelector('.modal')).toBeNull();
   });
+
+  it('fångar fokus med Tab och Shift+Tab i dialogen', () => {
+    const store = createMemoryStore();
+    store.saveCustomer(customer);
+    store.saveSettings(settings);
+    store.saveInvoice(invoice);
+    openEmailDialog(store, 'i1', undefined, vi.fn());
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>('.modal button')];
+    expect(document.activeElement).toBe(buttons[0]);
+    buttons[buttons.length - 1]?.focus();
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true });
+    document.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(buttons[0]);
+    const back = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, cancelable: true });
+    document.dispatchEvent(back);
+    expect(document.activeElement).toBe(buttons[buttons.length - 1]);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  });
 });

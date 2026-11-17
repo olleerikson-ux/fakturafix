@@ -201,7 +201,8 @@ describe('invoiceFormView', () => {
     store.saveInvoice(draft);
     invoiceFormView(root, store, 'f1');
     const vat = control(root, 'line-r1-vatRate') as HTMLSelectElement;
-    expect([...vat.options].map((o) => o.value)).toEqual(['0']);
+    expect(vat.value).toBe('0');
+    expect(vat.disabled).toBe(true);
     expect(root.textContent).toContain('momsbefriat');
 
     vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -209,6 +210,57 @@ describe('invoiceFormView', () => {
     const stored = store.getInvoice('f1');
     expect(stored?.vatExempt).toBe(true);
     expect(stored?.lines.every((l) => l.vatRate === 0)).toBe(true);
+  });
+
+  it('kund med omvänd skattskyldighet låser momsen och fakturan utfärdas med reverseCharge', () => {
+    store.saveCustomer({ ...customer, vatNumber: 'SE556111111101', reverseCharge: true });
+    store.saveSettings({ ...settings, vatNumber: 'SE556000000001' });
+    store.saveInvoice(draft);
+    invoiceFormView(root, store, 'f1');
+    const vat = control(root, 'line-r1-vatRate') as HTMLSelectElement;
+    expect(vat.value).toBe('0');
+    expect(vat.disabled).toBe(true);
+    expect(root.textContent).toContain('omvänd skattskyldighet');
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    button(root, 'Markera som skickad').click();
+    expect(store.getInvoice('f1')).toMatchObject({ status: 'sent', reverseCharge: true });
+  });
+
+  it('visar kärnans fel när säljaren saknar momsnummer vid omvänd skattskyldighet', () => {
+    store.saveCustomer({ ...customer, vatNumber: 'SE556111111101', reverseCharge: true });
+    store.saveInvoice(draft);
+    invoiceFormView(root, store, 'f1');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    button(root, 'Markera som skickad').click();
+    expect(store.getInvoice('f1')?.status).toBe('draft');
+    expect(root.querySelector('[role="status"] .notice-error')?.textContent).toContain('momsregistreringsnummer');
+  });
+
+  it('+ Lägg till från artikel lägger till en rad med artikelns värden', () => {
+    store.saveArticle({ id: 'a1', description: 'Konsulttimme', unit: 'tim', unitPrice: 95000, vatRate: 12, createdAt: '2026-01-01T00:00:00.000Z' });
+    invoiceFormView(root, store);
+    const before = root.querySelectorAll('fieldset.line').length;
+    button(root, '+ Lägg till från artikel').click();
+    document.querySelector<HTMLButtonElement>('.article-item')?.click();
+    const lines = root.querySelectorAll('fieldset.line');
+    expect(before).toBe(1);
+    expect(lines).toHaveLength(1);
+    const last = lines[lines.length - 1] as HTMLElement;
+    const val = (suffix: string) => (last.querySelector(`[name$="-${suffix}"]`) as HTMLInputElement).value;
+    expect(val('description')).toBe('Konsulttimme');
+    expect(val('quantity')).toBe('1');
+    expect(val('unitPrice')).toBe('950,00');
+    expect(val('vatRate')).toBe('12');
+  });
+
+  it('artikel läggs till under en rad som redan är ifylld', () => {
+    store.saveArticle({ id: 'a1', description: 'Bok', unitPrice: 20000, vatRate: 6, createdAt: '2026-01-01T00:00:00.000Z' });
+    store.saveInvoice(draft);
+    invoiceFormView(root, store, 'f1');
+    button(root, '+ Lägg till från artikel').click();
+    document.querySelector<HTMLButtonElement>('.article-item')?.click();
+    expect(root.querySelectorAll('fieldset.line')).toHaveLength(2);
   });
 
   it('delar ut fakturanummer och OCR när fakturan markeras som skickad', () => {

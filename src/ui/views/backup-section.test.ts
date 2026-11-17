@@ -79,13 +79,26 @@ describe('säkerhetskopiering i gränssnittet', () => {
     choose(json);
     await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
     expect(String(confirm.mock.calls[0]?.[0])).toContain('ERSÄTTS');
-    expect(String(confirm.mock.calls[0]?.[0])).toContain('1 kund och 0 fakturor');
+    expect(String(confirm.mock.calls[0]?.[0])).toContain('1 kund, 0 fakturor och 0 artiklar');
     expect(store.listCustomers()).toHaveLength(2);
 
     confirm.mockReturnValue(true);
     choose(json);
     await vi.waitFor(() => expect(store.listCustomers()).toHaveLength(1));
     expect(root.textContent).toContain('inläst');
+  });
+
+  it('varnar i bekräftelsen när en gammal kopia saknar artiklar', async () => {
+    store.saveCustomer(customer);
+    const { articles: _articles, ...old } = exportBackup(store);
+    settingsView(root, store);
+    const input = root.querySelector<HTMLInputElement>('#backup-file');
+    if (!input) throw new Error('Filväljaren saknas');
+    Object.defineProperty(input, 'files', { configurable: true, value: [new File([JSON.stringify(old)], 'gammal.json')] });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    input.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(confirm).toHaveBeenCalledOnce());
+    expect(String(confirm.mock.calls[0]?.[0])).toContain('artikelregister töms (Artiklar: 0)');
   });
 
   it('översikten visar påminnelse tills en kopia tagits', () => {
