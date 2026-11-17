@@ -25,6 +25,8 @@ import {
   type VatRate,
 } from '../../core/index';
 import { printInvoice } from '../../print/print';
+import { openEmailDialog } from '../email-dialog';
+import { getEmailedDate } from '../email';
 import { h } from '../dom';
 import {
   errorMessage,
@@ -494,6 +496,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
   const actions = issued
     ? [
         h('button', { type: 'button', class: 'btn-primary', onclick: printNow }, 'Skriv ut'),
+        h('button', { type: 'button', class: 'btn-secondary', onclick: () => openEmailDialog(store, existing?.id ?? '', () => invoiceFormView(root, store, existing?.id)) }, 'Skicka med e-post'),
         ...copyButton,
         ...(canCredit ? [h('button', { type: 'button', class: 'btn-secondary', onclick: credit }, 'Kreditera')] : []),
       ]
@@ -573,10 +576,12 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       ? [...creditRef, h('p', { class: 'hint' }, 'Utkast får fakturanummer och OCR-nummer först när de markeras som skickade.')]
       : [];
 
+  const emailedDate = existing && issued ? getEmailedDate(existing.id) : undefined;
+  const emailedNote = emailedDate ? [h('p', { class: 'emailed' }, `Mejlad ${emailedDate}.`)] : [];
   const exemptNotice = vatLocked
     ? [h('p', { class: 'notice notice-info' }, 'Ditt företag är momsbefriat, så alla rader har 0 % moms. Ändra det under Inställningar.')]
     : [];
-  root.replaceChildren(h('h1', {}, title), status, ...(issued ? creditRef : []), ...exemptNotice, ...intro, h('section', { class: 'card' }, form));
+  root.replaceChildren(h('h1', {}, title), status, ...(issued ? creditRef : []), ...exemptNotice, ...emailedNote, ...intro, h('section', { class: 'card' }, form));
   updateTotals();
   if (notice) announce(notice.text, notice.kind);
 }

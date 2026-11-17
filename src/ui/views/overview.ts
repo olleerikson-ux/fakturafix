@@ -5,6 +5,7 @@
 import { calculateTotals, displayStatus, formatSek, today, type Invoice, type Store } from '../../core/index';
 import { h } from '../dom';
 import { printInvoice } from '../../print/print';
+import { openEmailDialog } from '../email-dialog';
 import { getLastBackupDate, needsBackupReminder } from '../backup-reminder';
 import { errorMessage, STORAGE_ERROR_HINT } from '../form';
 
@@ -138,6 +139,9 @@ export function overviewView(root: HTMLElement, store: Store): void {
           h('a', { class: 'btn-secondary', href: `#/fakturor/${invoice.id}`, 'aria-label': `Öppna ${label}` }, 'Öppna'),
           invoice.status !== 'draft'
             ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Skriv ut ${label}`, onclick: () => print(invoice) }, 'Skriv ut')
+            : '',
+          invoice.status !== 'draft'
+            ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Skicka ${label} med e-post`, onclick: () => openEmailDialog(store, invoice.id, render) }, 'Skicka med e-post')
             : '',
           status === 'unpaid' || status === 'overdue'
             ? h('button', { type: 'button', class: 'btn-secondary', 'aria-label': `Markera ${label} som betald`, onclick: () => markPaid(invoice) }, 'Markera som betald')
