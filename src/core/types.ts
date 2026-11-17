@@ -37,7 +37,20 @@ export interface Customer {
   email?: string;
   /** "Er referens" på fakturan. */
   reference?: string;
+  /** Omvänd skattskyldighet: tjänster till företag i ett annat EU-land. */
+  reverseCharge?: boolean;
   address: Address;
+  createdAt: string;
+}
+
+/** Sparad artikel som kan läggas på en fakturarad. Raderna är kopior. */
+export interface Article {
+  id: string;
+  description: string;
+  unit?: string;
+  /** Pris per enhet exklusive moms, i öre. */
+  unitPrice: Ore;
+  vatRate: VatRate;
   createdAt: string;
 }
 
@@ -85,6 +98,8 @@ export interface Invoice {
   notes?: string;
   /** Sätts vid utfärdande från inställningarna. Momsbefriad faktura har 0 % moms på alla rader. */
   vatExempt?: boolean;
+  /** Sätts vid utfärdande från kunden och låses därefter. */
+  reverseCharge?: boolean;
   /** Id för den faktura som krediteras. Satt bara på kreditfakturor. */
   creditFor?: string;
   createdAt: string;

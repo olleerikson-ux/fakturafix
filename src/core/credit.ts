@@ -24,6 +24,8 @@ export function createCreditNote(original: Invoice, today: IsoDate): Invoice {
     ocr: '',
     status: 'draft',
     creditFor: original.id,
+    ...(original.vatExempt ? { vatExempt: true } : {}),
+    ...(original.reverseCharge ? { reverseCharge: true } : {}),
     notes: `Kreditering av faktura ${original.number} (${original.issueDate})`,
     createdAt: new Date().toISOString(),
   };

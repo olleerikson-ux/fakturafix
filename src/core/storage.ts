@@ -1,10 +1,11 @@
 import type { Store } from './index';
 import { createOcr } from './ocr';
 import { calculateTotals } from './vat';
-import type { Customer, Invoice } from './types';
+import type { Article, CompanySettings, Customer, Invoice } from './types';
 import {
   FIRST_INVOICE_NUMBER,
   deepEqual,
+  isArticle,
   isCompanySettings,
   isCustomer,
   isInvoice,
@@ -17,6 +18,7 @@ const KEYS = {
   version: `${PREFIX}version`,
   customers: `${PREFIX}customers`,
   invoices: `${PREFIX}invoices`,
+  articles: `${PREFIX}articles`,
   settings: `${PREFIX}settings`,
   lastInvoiceNumber: `${PREFIX}lastInvoiceNumber`,
 } as const;
@@ -196,6 +198,38 @@ function assertVatExemptHasNoVat(invoice: Invoice): void {
   }
 }
 
+/** Sant när fakturan utfärdas nu: den är inte ett utkast och den sparade posten är det inte heller. */
+function isBeingIssued(stored: unknown, invoice: Invoice): boolean {
+  if (invoice.status === 'draft') return false;
+  return stored === undefined || (isRecord(stored) && stored.status === 'draft');
+}
+
+/**
+ * Regler för omvänd skattskyldighet vid utfärdande: 0 % moms på alla rader,
+ * momsregistreringsnummer hos både kund och säljare, och säljaren får inte
+ * vara momsbefriad. Kontrolleras bara vid utfärdandet, eftersom inställningar
+ * och kunduppgifter kan ändras efteråt.
+ */
+function assertReverseChargeAllowed(
+  invoice: Invoice,
+  customer: Customer | undefined,
+  settings: CompanySettings | undefined,
+): void {
+  const taxed = invoice.lines.findIndex((line) => line.vatRate !== 0);
+  if (taxed !== -1) {
+    throw new Error(`Omvänd skattskyldighet kräver 0 % moms. Rad ${taxed + 1} har ${invoice.lines[taxed]?.vatRate} % moms.`);
+  }
+  if (!customer?.vatNumber) {
+    throw new Error('Omvänd skattskyldighet kräver att kunden har ett momsregistreringsnummer.');
+  }
+  if (!settings?.vatNumber) {
+    throw new Error('Omvänd skattskyldighet kräver att du har ett momsregistreringsnummer i inställningarna.');
+  }
+  if (settings.vatExempt) {
+    throw new Error('Omvänd skattskyldighet kan inte användas när företaget är momsbefriat.');
+  }
+}
+
 /** Regler för kreditfakturor och negativa belopp. `others` är övriga sparade fakturor. */
 function assertCreditRules(invoice: Invoice, others: Invoice[]): void {
   const total = calculateTotals(invoice.lines).total;
@@ -255,7 +289,15 @@ export function createLocalStore(storageArg?: Storage): Store {
     });
   }
 
+  const readSettings = (): CompanySettings | undefined => {
+    const value = readJson(storage, KEYS.settings);
+    if (value === undefined) return undefined;
+    if (isCompanySettings(value)) return value;
+    warnOnce(`ignorerar företagsinställningar med fel form i ${KEYS.settings}`, value);
+    return undefined;
+  };
   const customers = (): Customer[] => readValid(KEYS.customers, isCustomer, 'en kund');
+  const articles = (): Article[] => readValid(KEYS.articles, isArticle, 'en artikel');
   const invoices = (): Invoice[] => readValid(KEYS.invoices, isInvoice, 'en faktura');
   const lastInvoiceNumber = (): number =>
     Math.max(
@@ -276,6 +318,16 @@ export function createLocalStore(storageArg?: Storage): Store {
         readRawList(storage, KEYS.customers).filter((value) => !hasId(value, id)),
       ),
 
+    listArticles: articles,
+    saveArticle: (article) =>
+      writeJson(storage, KEYS.articles, upsert(readRawList(storage, KEYS.articles), article)),
+    deleteArticle: (id) =>
+      writeJson(
+        storage,
+        KEYS.articles,
+        readRawList(storage, KEYS.articles).filter((value) => !hasId(value, id)),
+      ),
+
     listInvoices: invoices,
     getInvoice: (id) => invoices().find((invoice) => invoice.id === id),
     saveInvoice: (invoice) => {
@@ -286,6 +338,13 @@ export function createLocalStore(storageArg?: Storage): Store {
       // Läs den råa posten, inte bara de validerade, så att en utfärdad faktura
       // med trasig form inte kan kringgå låsningen.
       const stored = readRawList(storage, KEYS.invoices).find((value) => hasId(value, invoice.id));
+      if (invoice.reverseCharge && isBeingIssued(stored, invoice)) {
+        assertReverseChargeAllowed(
+          invoice,
+          customers().find((customer) => customer.id === invoice.customerId),
+          readSettings(),
+        );
+      }
       if (stored !== undefined) assertMayOverwrite(stored, invoice);
       if (isAssigningNumber(stored, invoice)) assertNextFreeNumber(invoice, lastInvoiceNumber());
       const highest = Math.max(lastInvoiceNumber(), invoice.number);
@@ -309,18 +368,13 @@ export function createLocalStore(storageArg?: Storage): Store {
     replaceAll: (data) => {
       writeJson(storage, KEYS.customers, data.customers);
       writeJson(storage, KEYS.invoices, data.invoices);
+      writeJson(storage, KEYS.articles, data.articles ?? []);
       writeJson(storage, KEYS.lastInvoiceNumber, data.lastInvoiceNumber);
       if (data.settings) writeJson(storage, KEYS.settings, data.settings);
       else storage?.removeItem(KEYS.settings);
     },
 
-    getSettings: () => {
-      const value = readJson(storage, KEYS.settings);
-      if (value === undefined) return undefined;
-      if (isCompanySettings(value)) return value;
-      warnOnce(`ignorerar företagsinställningar med fel form i ${KEYS.settings}`, value);
-      return undefined;
-    },
+    getSettings: readSettings,
     saveSettings: (settings) => writeJson(storage, KEYS.settings, settings),
   };
 }
