@@ -4,6 +4,7 @@ import { calculateTotals, lineNet } from './vat';
 
 const BOM = '﻿';
 const EOL = '\r\n';
+const ROUNDING_LABEL = 'Öresavrundning';
 const HEADER = [
   'Fakturanummer',
   'Fakturadatum',
@@ -55,32 +56,37 @@ function invoiceRows(
   numberById: ReadonlyMap<string, number>,
   credited: ReadonlySet<string>,
 ): string[][] {
-  const vatByRate = calculateTotals(invoice.lines).vatByRate;
+  const totals = calculateTotals(invoice.lines);
+  const vatByRate = totals.vatByRate;
   const original = invoice.creditFor === undefined ? undefined : numberById.get(invoice.creditFor);
-  return [...netByRate(invoice)]
+  const row = (rate: string, net: Ore, vat: Ore, total: Ore): string[] => [
+    String(invoice.number),
+    invoice.issueDate,
+    invoice.dueDate,
+    customer?.name ?? '',
+    customer?.orgNumber ?? '',
+    rate,
+    kronor(net),
+    kronor(vat),
+    kronor(total),
+    statusLabel(invoice, credited),
+    invoice.paidDate ?? '',
+    original === undefined ? '' : String(original),
+  ];
+  const rateRows = [...netByRate(invoice)]
     .sort(([a], [b]) => a - b)
     .map(([rate, net]) => {
       const vat = vatByRate[rate] ?? 0;
-      return [
-        String(invoice.number),
-        invoice.issueDate,
-        invoice.dueDate,
-        customer?.name ?? '',
-        customer?.orgNumber ?? '',
-        String(rate),
-        kronor(net),
-        kronor(vat),
-        kronor(net + vat),
-        statusLabel(invoice, credited),
-        invoice.paidDate ?? '',
-        original === undefined ? '' : String(original),
-      ];
+      return row(String(rate), net, vat, net + vat);
     });
+  // Öresavrundningen får en egen rad så att Totalt per faktura summerar till "att betala".
+  return totals.rounding === 0 ? rateRows : [...rateRows, row(ROUNDING_LABEL, 0, 0, totals.rounding)];
 }
 
 /**
  * Bokföringsexport som CSV för svensk Excel: semikolon, decimalkomma, CRLF och BOM.
- * En rad per utfärdad faktura och momssats. Kreditfakturor får negativa belopp.
+ * En rad per utfärdad faktura och momssats, plus en rad `Öresavrundning` när avrundningen
+ * inte är 0. Kreditfakturor får negativa belopp.
  * `from` och `to` filtrerar på fakturadatum (båda inklusive).
  */
 export function invoicesToCsv(

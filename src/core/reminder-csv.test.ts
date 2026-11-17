@@ -4,6 +4,7 @@ import { invoicesToCsv } from "./csv";
 import { createOcr } from "./ocr";
 import { MAX_REMINDER_FEE, reminderAmounts } from "./reminder";
 import { createLocalStore } from "./storage";
+import { calculateTotals } from "./vat";
 import type { CompanySettings, Customer, Invoice } from "./types";
 import { isCompanySettings } from "./validation";
 
@@ -94,6 +95,14 @@ describe("reminderAmounts", () => {
     expect(r.interest).toBe(1);
   });
 
+  it("räknar räntan i heltal även för stora belopp och decimalräntor", () => {
+    const big = [{ id: "l", description: "x", quantity: 1, unitPrice: 9_000_000_000_000, vatRate: 0 as const }];
+    const r = reminderAmounts(inv(1001, { lines: big }), { ...settings, lateInterestPercent: 8.25 }, "2027-12-01");
+    // 90 000 000 000 kr × 8,25 % × 365 / 365 dagar = exakt 8,25 % av kapitalet
+    expect(r.daysLate).toBe(365);
+    expect(r.interest).toBe(742_500_000_000);
+  });
+
   it("kastar fel för utkast, betalda fakturor och kreditfakturor", () => {
     expect(() => reminderAmounts(inv(0, { status: "draft", ocr: "" }), settings, "2026-12-31")).toThrow(/utkast/i);
     expect(() => reminderAmounts(inv(1001, { status: "paid" }), settings, "2026-12-31")).toThrow(/betald/);
@@ -135,7 +144,8 @@ describe("invoicesToCsv", () => {
     const lines = invoicesToCsv([mixed], [customer]).split("\r\n");
     expect(lines[1]).toBe("1001;2026-11-01;2026-12-01;Testkund AB;556000-0001;6;1234,50;74,07;1308,57;Obetald;;");
     expect(lines[2]).toBe("1001;2026-11-01;2026-12-01;Testkund AB;556000-0001;25;1000,00;250,00;1250,00;Obetald;;");
-    expect(lines[3]).toBe("");
+    expect(lines[3]).toBe("1001;2026-11-01;2026-12-01;Testkund AB;556000-0001;Öresavrundning;0,00;0,00;0,43;Obetald;;");
+    expect(lines[4]).toBe("");
   });
 
   it("tar bara med utfärdade fakturor och sorterar på nummer", () => {
@@ -175,6 +185,34 @@ describe("invoicesToCsv", () => {
   it("visar status Betald med betaldatum", () => {
     const paid = inv(1001, { status: "paid", paidDate: "2026-11-20" });
     expect(invoicesToCsv([paid], [customer]).split("\r\n")[1]).toContain(";Betald;2026-11-20;");
+  });
+
+  it("lägger till en rad Öresavrundning när avrundningen inte är 0", () => {
+    const up = inv(1001, {
+      lines: [{ id: "l", description: "x", quantity: 1, unitPrice: 100050, vatRate: 0 }],
+    });
+    const down = inv(1002, {
+      lines: [{ id: "l", description: "x", quantity: 1, unitPrice: 100049, vatRate: 0 }],
+    });
+    const rows = invoicesToCsv([up, down], [customer]).split("\r\n");
+    expect(rows[2]).toBe("1001;2026-11-01;2026-12-01;Testkund AB;556000-0001;Öresavrundning;0,00;0,00;0,50;Obetald;;");
+    expect(rows[4]).toBe("1002;2026-11-01;2026-12-01;Testkund AB;556000-0001;Öresavrundning;0,00;0,00;-0,49;Obetald;;");
+    expect(rows).toHaveLength(6);
+  });
+
+  it("summan av Totalt per faktura är lika med att betala", () => {
+    const mixed = inv(1001, {
+      lines: [
+        { id: "a", description: "x", quantity: 1, unitPrice: 33333, vatRate: 25 },
+        { id: "b", description: "y", quantity: 1, unitPrice: 12345, vatRate: 6 },
+      ],
+    });
+    const sum = invoicesToCsv([mixed], [customer])
+      .split("\r\n")
+      .slice(1, -1)
+      .map((r) => Number(r.split(";")[8]?.replace(",", ".")))
+      .reduce((a, b) => a + b, 0);
+    expect(Math.round(sum * 100)).toBe(calculateTotals(mixed.lines).total);
   });
 
   it("citerar fält med semikolon och citattecken", () => {
