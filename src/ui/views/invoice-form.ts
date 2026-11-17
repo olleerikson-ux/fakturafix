@@ -150,8 +150,8 @@ function byName(a: Customer, b: Customer): number {
   return a.name.localeCompare(b.name, 'sv');
 }
 
-function emptyLine(): LineInput {
-  return { id: newId(), description: '', quantity: '1', unit: '', unitPrice: '', vatRate: 25 };
+function emptyLine(vatRate: VatRate = 25): LineInput {
+  return { id: newId(), description: '', quantity: '1', unit: '', unitPrice: '', vatRate };
 }
 
 function lineToInput(line: InvoiceLine): LineInput {
@@ -195,6 +195,9 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
   const original = isCreditNote ? store.getInvoice(existing.creditFor ?? '') : undefined;
   const allInvoices = existing ? store.listInvoices() : [];
   const alreadyCredited = existing !== undefined && allInvoices.some((i) => i.creditFor === existing.id && i.status !== 'draft');
+  // Momsbefrielse: en kreditfaktura följer originalet, annars gäller inställningen när fakturan utfärdas.
+  const vatExemptNow = isCreditNote ? original?.vatExempt === true : store.getSettings()?.vatExempt === true;
+  const vatLocked = vatExemptNow && !issued;
   const canCredit = issued && !isCreditNote && !alreadyCredited;
   const settings = store.getSettings();
   const customers = store.listCustomers().sort(byName);
@@ -271,7 +274,9 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       selectField(
         ID_PREFIX,
         { name: lineField(line.id, 'vatRate'), label: 'Moms', value: String(line.vatRate) },
-        VAT_RATES.map((rate) => ({ value: String(rate), label: `${rate} %` })),
+        vatLocked
+          ? [{ value: '0', label: '0 % (momsbefriad)' }]
+          : VAT_RATES.map((rate) => ({ value: String(rate), label: `${rate} %` })),
       ),
       h('div', { class: 'field line-total' }, h('span', { class: 'line-total-label' }, 'Belopp'), amount),
       h(
@@ -304,7 +309,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       type: 'button',
       class: 'btn-secondary',
       onclick: () => {
-        const line = emptyLine();
+        const line = emptyLine(vatLocked ? 0 : 25);
         addLine(line);
         updateTotals();
         form.querySelector<HTMLInputElement>(`[name="${lineField(line.id, 'description')}"]`)?.focus();
@@ -367,6 +372,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     ocr: mode === 'send' ? createOcr(number) : '',
     status: mode === 'send' ? 'sent' : 'draft',
     notes: optional(input.notes),
+    ...(mode === 'send' && vatExemptNow ? { vatExempt: true } : {}),
     ...(existing?.creditFor !== undefined ? { creditFor: existing.creditFor } : {}),
     createdAt: existing?.createdAt ?? new Date().toISOString(),
   });
@@ -539,7 +545,10 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
   });
   form.addEventListener('change', updateTotals);
 
-  for (const line of existing ? existing.lines.map(lineToInput) : [emptyLine()]) addLine(line);
+  const startLines = existing
+    ? existing.lines.map((l) => ({ ...lineToInput(l), ...(vatLocked ? { vatRate: 0 as VatRate } : {}) }))
+    : [emptyLine(vatLocked ? 0 : 25)];
+  for (const line of startLines) addLine(line);
 
   const creditRef = isCreditNote
     ? [
@@ -564,7 +573,10 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       ? [...creditRef, h('p', { class: 'hint' }, 'Utkast får fakturanummer och OCR-nummer först när de markeras som skickade.')]
       : [];
 
-  root.replaceChildren(h('h1', {}, title), status, ...(issued ? creditRef : []), ...intro, h('section', { class: 'card' }, form));
+  const exemptNotice = vatLocked
+    ? [h('p', { class: 'notice notice-info' }, 'Ditt företag är momsbefriat, så alla rader har 0 % moms. Ändra det under Inställningar.')]
+    : [];
+  root.replaceChildren(h('h1', {}, title), status, ...(issued ? creditRef : []), ...exemptNotice, ...intro, h('section', { class: 'card' }, form));
   updateTotals();
   if (notice) announce(notice.text, notice.kind);
 }

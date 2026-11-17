@@ -151,3 +151,15 @@
   font-weight: 600;
   margin: 0 0 12pt;
 }
+
+.invoice-print .inv-logo {
+  display: block;
+  max-height: 60px;
+  max-width: 220px;
+  margin-bottom: 8pt;
+}
+
+.invoice-print .inv-vat-text td {
+  font-style: italic;
+  padding: 2pt 6pt;
+}

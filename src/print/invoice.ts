@@ -4,6 +4,7 @@
  */
 import {
   calculateTotals,
+  DEFAULT_VAT_EXEMPT_TEXT,
   formatSek,
   lineNet,
   type Address,
@@ -47,6 +48,23 @@ function numberText(quantity: number): string {
  * Renderar fakturan. För en kreditfaktura (creditFor satt) skickas ursprungsfakturan med
  * som original, så att "Avser faktura nr X, daterad Y" kan skrivas ut.
  */
+/** Logotypen visas bara som <img src>, aldrig som HTML, så att en SVG inte kan köra skript. */
+function logoElement(settings: CompanySettings): HTMLElement[] {
+  const url = settings.logoDataUrl;
+  if (!url || !url.startsWith('data:image/')) return [];
+  const img = document.createElement('img');
+  img.className = 'inv-logo';
+  img.alt = '';
+  img.src = url;
+  return [img];
+}
+
+function vatExemptRow(text: string): HTMLElement {
+  const cell = el('td', undefined, text);
+  cell.colSpan = 2;
+  return el('tr', 'inv-vat-text', cell);
+}
+
 export function renderInvoice(
   invoice: Invoice,
   customer: Customer,
@@ -70,7 +88,7 @@ export function renderInvoice(
     el(
       'header',
       'inv-header',
-      el('div', 'inv-seller', el('strong', 'inv-seller-name', settings.name)),
+      el('div', 'inv-seller', ...logoElement(settings), el('strong', 'inv-seller-name', settings.name)),
       el('div', 'inv-title', el('h1', undefined, isCredit ? 'KREDITFAKTURA' : 'FAKTURA'), meta),
     ),
   );
@@ -111,7 +129,10 @@ export function renderInvoice(
 
   const sumRow = (label: string, value: string, className?: string) =>
     el('tr', className, el('th', undefined, label), el('td', 'num', value));
-  const vatRows = Object.entries(totals.vatByRate).map(([rate, amount]) => sumRow(`Moms ${rate} %`, formatSek(amount)));
+  const exempt = invoice.vatExempt === true;
+  const vatRows = exempt
+    ? [vatExemptRow(settings.vatExemptText || DEFAULT_VAT_EXEMPT_TEXT)]
+    : Object.entries(totals.vatByRate).map(([rate, amount]) => sumRow(`Moms ${rate} %`, formatSek(amount)));
   root.append(
     el(
       'table',
@@ -148,7 +169,7 @@ export function renderInvoice(
   );
 
   const contact = [settings.email, settings.phone].filter((v): v is string => Boolean(v));
-  const ids = [`Org.nr: ${settings.orgNumber}`, settings.vatNumber ? `Momsnr: ${settings.vatNumber}` : ''].filter(Boolean);
+  const ids = [`Org.nr: ${settings.orgNumber}`, settings.vatNumber && !exempt ? `Momsnr: ${settings.vatNumber}` : ''].filter(Boolean);
   const extra = [
     settings.fSkatt ? 'Godkänd för F-skatt' : '',
     settings.lateInterestPercent !== undefined

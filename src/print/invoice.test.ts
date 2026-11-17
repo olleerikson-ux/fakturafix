@@ -88,4 +88,22 @@ describe('renderInvoice', () => {
     expect(t).not.toContain('Förfallodatum');
     expect(t).not.toContain(createOcr(1002));
   });
+
+  it('visar logotypen som bild och aldrig som HTML', () => {
+    const url = 'data:image/svg+xml;base64,PHN2Zz48c2NyaXB0Pnh4PC9zY3JpcHQ+PC9zdmc+';
+    const root = renderInvoice(invoice, customer, { ...settings, logoDataUrl: url });
+    const img = root.querySelector('img.inv-logo');
+    expect(img?.getAttribute('src')).toBe(url);
+    expect(root.querySelector('script')).toBeNull();
+    expect(renderInvoice(invoice, customer, { ...settings, logoDataUrl: 'javascript:alert(1)' }).querySelector('img')).toBeNull();
+  });
+
+  it('momsbefriad faktura: texten ersätter momsraderna och momsnumret döljs', () => {
+    const zero: Invoice = { ...invoice, vatExempt: true, lines: invoice.lines.map((l) => ({ ...l, vatRate: 0 })) };
+    const t = renderInvoice(zero, customer, { ...settings, vatExempt: true, vatExemptText: 'Momsbefriad enligt testtext.' }).textContent ?? '';
+    expect(t).toContain('Momsbefriad enligt testtext.');
+    expect(t).not.toContain('Moms 25');
+    expect(t).not.toContain('SE556000000001');
+    expect(t).toContain('SE556111111101');
+  });
 });

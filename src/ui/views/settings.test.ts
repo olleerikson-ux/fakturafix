@@ -123,4 +123,41 @@ describe('settingsView', () => {
 
     expect(root.querySelector('[role="status"] .notice-error')?.textContent).toContain('Kunde inte spara inställningarna');
   });
+
+  it('sparar momsbefrielse med text och behåller den vid nästa sparning', () => {
+    store.saveSettings(testSettings);
+    settingsView(root, store);
+    const form = getForm(root);
+    expect(input(form, 'vatExemptText').value).toContain('Momsbefriad');
+    input(form, 'vatExempt').checked = true;
+    form.requestSubmit();
+    expect(store.getSettings()?.vatExempt).toBe(true);
+    expect(store.getSettings()?.vatExemptText).toBeDefined();
+  });
+
+  it('laddar upp, sparar och tar bort en logotyp, och avvisar fel typ och för stor fil', async () => {
+    store.saveSettings(testSettings);
+    settingsView(root, store);
+    const fileInput = root.querySelector<HTMLInputElement>('#inst-logo');
+    if (!fileInput) throw new Error('Filväljaren saknas');
+    const choose = (file: File) => {
+      Object.defineProperty(fileInput, 'files', { configurable: true, value: [file] });
+      fileInput.dispatchEvent(new Event('change'));
+    };
+
+    choose(new File(['x'], 'a.gif', { type: 'image/gif' }));
+    expect(root.textContent).toContain('PNG-, JPG- eller SVG');
+    choose(new File([new Uint8Array(200_001)], 'stor.png', { type: 'image/png' }));
+    expect(root.textContent).toContain('för stor');
+    expect(root.querySelector('.logo-preview img')).toBeNull();
+
+    choose(new File(['abc'], 'logo.png', { type: 'image/png' }));
+    await vi.waitFor(() => expect(root.querySelector('.logo-preview img')).not.toBeNull());
+    getForm(root).requestSubmit();
+    expect(store.getSettings()?.logoDataUrl).toMatch(/^data:image\/png;base64,/);
+
+    [...root.querySelectorAll('button')].find((b) => b.textContent === 'Ta bort logotyp')?.click();
+    getForm(root).requestSubmit();
+    expect(store.getSettings()?.logoDataUrl).toBeUndefined();
+  });
 });
