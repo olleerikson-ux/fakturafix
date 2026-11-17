@@ -383,7 +383,7 @@ describe('invoiceFormView', () => {
     expect(root.querySelector('h1')?.textContent).toBe('Faktura 1001');
     expect(root.textContent).toContain('kreditfaktura');
     expect(root.querySelector<HTMLFieldSetElement>('.invoice-content')?.disabled).toBe(true);
-    expect([...root.querySelectorAll('.form-actions button')].map((b) => b.textContent)).toEqual(['Skriv ut', 'Kopiera till ny faktura', 'Kreditera']);
+    expect([...root.querySelectorAll('.form-actions button')].map((b) => b.textContent)).toEqual(['Skriv ut', 'Skicka med e-post', 'Kopiera till ny faktura', 'Kreditera']);
     expect(totalsText(root)).toContain(formatSek(187500));
   });
 
