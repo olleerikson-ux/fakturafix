@@ -82,14 +82,11 @@ describe('reminderAmounts: påminnelseavgift', () => {
     expect(reminderAmounts(due(), withInterest(8), '2026-04-10').fee).toBe(0);
   });
 
-  it('avgiften får aldrig överstiga 60 kr (6 000 öre): antingen fel eller kapad avgift', () => {
-    let fee: number | undefined;
-    try {
-      fee = reminderAmounts(due(), settings({ lateInterestPercent: 8, reminderFee: 6001 }), '2026-04-10').fee;
-    } catch {
-      fee = undefined;
-    }
-    expect(fee === undefined || fee <= 6000).toBe(true);
+  it('avgiften kapas till 60 kr (6 000 öre) och kastar inget fel', () => {
+    const over = reminderAmounts(due(), settings({ lateInterestPercent: 8, reminderFee: 6001 }), '2026-04-10');
+    expect(over.fee).toBe(6000);
+    expect(over.total).toBe(125000 + 2740 + 6000);
+    expect(reminderAmounts(due(), settings({ lateInterestPercent: 8, reminderFee: 100000 }), '2026-04-10').fee).toBe(6000);
   });
 });
 
@@ -166,6 +163,36 @@ describe('invoicesToCsv: flera momssatser och citering', () => {
     expect(byRate['25']?.[7]).toBe('250,00');
     expect(byRate['12']?.[6]).toBe('500,00');
     expect(byRate['12']?.[7]).toBe('60,00');
+  });
+
+  it('Totalt per rad är netto + moms för den satsen, och ingen avrundningsrad när avrundningen är 0', () => {
+    const mixed = due({ lines: [line(1, 100000, 25), line(1, 50000, 12)] });
+    const out = rows(invoicesToCsv([mixed], [customer()])).slice(1).map((r) => r.split(';'));
+    expect(out).toHaveLength(2);
+    expect(out.find((c) => c[5] === '25')?.[8]).toBe('1250,00');
+    expect(out.find((c) => c[5] === '12')?.[8]).toBe('560,00');
+  });
+
+  it('en extra rad "Öresavrundning" med Netto 0, Moms 0 och Totalt = avrundningen, så att summan blir "att betala"', () => {
+    // 1 000,50 kr utan moms rundas upp till 1 001 kr: avrundning +0,50 kr
+    const up = due({ lines: [line(1, 100050, 0)] });
+    const out = rows(invoicesToCsv([up], [customer()])).slice(1).map((c) => c.split(';'));
+    expect(out).toHaveLength(2);
+    const rate = out.find((c) => c[5] === '0');
+    const rounding = out.find((c) => c[5] === 'Öresavrundning');
+    expect(rate?.[6]).toBe('1000,50');
+    expect(rate?.[8]).toBe('1000,50');
+    expect(rounding?.[0]).toBe('1001');
+    expect(rounding?.[6]).toBe('0,00');
+    expect(rounding?.[7]).toBe('0,00');
+    expect(rounding?.[8]).toBe('0,50');
+  });
+
+  it('negativ avrundning ger negativt Totalt på avrundningsraden', () => {
+    // 1 000,49 kr utan moms rundas ner till 1 000 kr: avrundning -0,49 kr
+    const down = due({ lines: [line(1, 100049, 0)] });
+    const out = rows(invoicesToCsv([down], [customer()])).slice(1).map((c) => c.split(';'));
+    expect(out.find((c) => c[5] === 'Öresavrundning')?.[8]).toBe('-0,49');
   });
 
   it('citerar fält med semikolon och dubblar citattecken', () => {
