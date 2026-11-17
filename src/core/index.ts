@@ -29,6 +29,11 @@ export { addDays, today, displayStatus, isValidIsoDate } from './dates';
 // ---- Lagring ----
 export { createLocalStore } from './storage';
 
+// ---- Påminnelser och bokföringsexport ----
+export { reminderAmounts, MAX_REMINDER_FEE } from './reminder';
+export type { ReminderAmounts } from './reminder';
+export { invoicesToCsv } from './csv';
+
 // ---- Kreditfakturor ----
 export { createCreditNote } from './credit';
 

@@ -132,6 +132,7 @@ export function isCompanySettings(value: unknown): value is CompanySettings {
     typeof value.fSkatt === 'boolean' &&
     Number.isSafeInteger(value.paymentTermsDays) &&
     (value.lateInterestPercent === undefined || isFiniteNumber(value.lateInterestPercent)) &&
+    (value.reminderFee === undefined || (Number.isSafeInteger(value.reminderFee) && (value.reminderFee as number) >= 0)) &&
     isOptionalBoolean(value.vatExempt) &&
     isOptionalString(value.vatExemptText) &&
     (value.logoDataUrl === undefined || isLogoDataUrl(value.logoDataUrl))
