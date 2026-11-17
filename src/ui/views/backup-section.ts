@@ -55,7 +55,8 @@ export function backupSection(store: Store, onImported: () => void): HTMLElement
     try {
       const backup = parseBackup(await readFile(file));
       const question =
-        `Säkerhetskopian innehåller ${plural(backup.customers.length, 'kund', 'kunder')} och ${plural(backup.invoices.length, 'faktura', 'fakturor')}. ` +
+        `Säkerhetskopian innehåller ${plural(backup.customers.length, 'kund', 'kunder')}, ${plural(backup.invoices.length, 'faktura', 'fakturor')} och ${plural(backup.articles?.length ?? 0, 'artikel', 'artiklar')}. ` +
+        (backup.articles === undefined ? 'Kopian saknar artiklar, så ditt artikelregister töms (Artiklar: 0). ' : '') +
         'Om du läser in den ERSÄTTS all data som finns i Fakturafix nu. Det går inte att ångra. Vill du fortsätta?';
       if (!window.confirm(question)) {
         say('Inläsningen avbröts. Inget har ändrats.', 'ok');

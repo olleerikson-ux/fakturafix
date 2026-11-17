@@ -27,6 +27,7 @@ import {
 import { printInvoice } from '../../print/print';
 import { openEmailDialog } from '../email-dialog';
 import { getEmailedDate } from '../email';
+import { openArticlePicker } from '../article-picker';
 import { h } from '../dom';
 import {
   errorMessage,
@@ -199,7 +200,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
   const alreadyCredited = existing !== undefined && allInvoices.some((i) => i.creditFor === existing.id && i.status !== 'draft');
   // Momsbefrielse: en kreditfaktura följer originalet, annars gäller inställningen när fakturan utfärdas.
   const vatExemptNow = isCreditNote ? original?.vatExempt === true : store.getSettings()?.vatExempt === true;
-  const vatLocked = vatExemptNow && !issued;
+  const creditReverse = isCreditNote && existing?.reverseCharge === true;
   const canCredit = issued && !isCreditNote && !alreadyCredited;
   const settings = store.getSettings();
   const customers = store.listCustomers().sort(byName);
@@ -276,9 +277,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       selectField(
         ID_PREFIX,
         { name: lineField(line.id, 'vatRate'), label: 'Moms', value: String(line.vatRate) },
-        vatLocked
-          ? [{ value: '0', label: '0 % (momsbefriad)' }]
-          : VAT_RATES.map((rate) => ({ value: String(rate), label: `${rate} %` })),
+        VAT_RATES.map((rate) => ({ value: String(rate), label: `${rate} %` })),
       ),
       h('div', { class: 'field line-total' }, h('span', { class: 'line-total-label' }, 'Belopp'), amount),
       h(
@@ -303,7 +302,62 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
   const addLine = (line: LineInput) => {
     lineIds.push(line.id);
     linesContainer.append(lineElement(line));
+    applyVatLock();
   };
+
+  /** Varför momsen är låst till 0 %: momsbefrielse eller omvänd skattskyldighet. Inget lås på utfärdade fakturor. */
+  const vatLockReason = (): 'exempt' | 'reverse' | undefined => {
+    if (issued) return undefined;
+    if (vatExemptNow) return 'exempt';
+    const reverse = isCreditNote ? creditReverse : store.getCustomer(readText(form, 'customerId'))?.reverseCharge === true;
+    return reverse ? 'reverse' : undefined;
+  };
+
+  const vatNote = h('p', { class: 'notice notice-info', hidden: true });
+  const applyVatLock = () => {
+    if (!form) return;
+    const reason = vatLockReason();
+    for (const select of form.querySelectorAll<HTMLSelectElement>('select[name$="-vatRate"]')) {
+      if (reason) {
+        if (!select.disabled) select.dataset.rate = select.value;
+        select.value = '0';
+        select.disabled = true;
+      } else if (select.disabled) {
+        select.value = select.dataset.rate ?? '25';
+        select.disabled = false;
+      }
+    }
+    vatNote.hidden = reason === undefined;
+    vatNote.textContent =
+      reason === 'exempt'
+        ? 'Ditt företag är momsbefriat, så alla rader har 0 % moms. Ändra det under Inställningar.'
+        : reason === 'reverse'
+          ? 'Kunden har omvänd skattskyldighet, så alla rader har 0 % moms och fakturan får texten "Omvänd skattskyldighet".'
+          : '';
+  };
+
+  const addFromArticle = h(
+    'button',
+    {
+      type: 'button',
+      class: 'btn-secondary',
+      onclick: () =>
+        openArticlePicker(store.listArticles().sort((a, b) => a.description.localeCompare(b.description, 'sv')), (article) => {
+          const line: LineInput = {
+            id: newId(),
+            description: article.description,
+            quantity: '1',
+            unit: article.unit ?? '',
+            unitPrice: oreToInput(article.unitPrice),
+            vatRate: article.vatRate,
+          };
+          addLine(line);
+          updateTotals();
+          form.querySelector<HTMLInputElement>(`[name="${lineField(line.id, 'quantity')}"]`)?.focus();
+        }),
+    },
+    '+ Lägg till från artikel',
+  );
 
   const addLineButton = h(
     'button',
@@ -311,7 +365,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       type: 'button',
       class: 'btn-secondary',
       onclick: () => {
-        const line = emptyLine(vatLocked ? 0 : 25);
+        const line = emptyLine();
         addLine(line);
         updateTotals();
         form.querySelector<HTMLInputElement>(`[name="${lineField(line.id, 'description')}"]`)?.focus();
@@ -375,6 +429,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     status: mode === 'send' ? 'sent' : 'draft',
     notes: optional(input.notes),
     ...(mode === 'send' && vatExemptNow ? { vatExempt: true } : {}),
+    ...(isCreditNote ? (creditReverse ? { reverseCharge: true } : {}) : mode === 'send' && store.getCustomer(input.customerId)?.reverseCharge ? { reverseCharge: true } : {}),
     ...(existing?.creditFor !== undefined ? { creditFor: existing.creditFor } : {}),
     createdAt: existing?.createdAt ?? new Date().toISOString(),
   });
@@ -518,7 +573,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       { class: 'lines-fieldset' },
       h('legend', {}, 'Rader'),
       linesContainer,
-      ...(issued ? [] : [h('div', { class: 'form-actions' }, addLineButton)]),
+      ...(issued ? [] : [h('div', { class: 'form-actions' }, addLineButton, addFromArticle)]),
     ),
     h(
       'div',
@@ -546,12 +601,12 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     }
     updateTotals();
   });
-  form.addEventListener('change', updateTotals);
+  form.addEventListener('change', () => {
+    applyVatLock();
+    updateTotals();
+  });
 
-  const startLines = existing
-    ? existing.lines.map((l) => ({ ...lineToInput(l), ...(vatLocked ? { vatRate: 0 as VatRate } : {}) }))
-    : [emptyLine(vatLocked ? 0 : 25)];
-  for (const line of startLines) addLine(line);
+  for (const line of existing ? existing.lines.map(lineToInput) : [emptyLine()]) addLine(line);
 
   const creditRef = isCreditNote
     ? [
@@ -577,11 +632,9 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       : [];
 
   const emailedDate = existing && issued ? getEmailedDate(existing.id) : undefined;
-  const emailedNote = emailedDate ? [h('p', { class: 'emailed' }, `Mejlad ${emailedDate}.`)] : [];
-  const exemptNotice = vatLocked
-    ? [h('p', { class: 'notice notice-info' }, 'Ditt företag är momsbefriat, så alla rader har 0 % moms. Ändra det under Inställningar.')]
-    : [];
-  root.replaceChildren(h('h1', {}, title), status, ...(issued ? creditRef : []), ...exemptNotice, ...emailedNote, ...intro, h('section', { class: 'card' }, form));
+  const emailedNote = emailedDate ? [h('p', { class: 'emailed' }, `Mejlprogram öppnat ${emailedDate}.`)] : [];
+  root.replaceChildren(h('h1', {}, title), status, ...(issued ? creditRef : []), vatNote, ...emailedNote, ...intro, h('section', { class: 'card' }, form));
+  applyVatLock();
   updateTotals();
   if (notice) announce(notice.text, notice.kind);
 }
