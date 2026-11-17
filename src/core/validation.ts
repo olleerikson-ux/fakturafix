@@ -72,6 +72,18 @@ function isInvoiceLine(value: unknown): value is InvoiceLine {
   );
 }
 
+function isOptionalBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === 'boolean';
+}
+
+export const MAX_LOGO_LENGTH = 300_000;
+const LOGO_PATTERN = /^data:image\/(png|jpeg|svg\+xml)[;,]/;
+
+/** En logotyp som data-URL: PNG, JPEG eller SVG, högst MAX_LOGO_LENGTH tecken. */
+export function isLogoDataUrl(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= MAX_LOGO_LENGTH && LOGO_PATTERN.test(value);
+}
+
 export function isInvoice(value: unknown): value is Invoice {
   return (
     isRecord(value) &&
@@ -87,6 +99,7 @@ export function isInvoice(value: unknown): value is Invoice {
     (value.paidDate === undefined || isIsoDate(value.paidDate)) &&
     isOptionalString(value.notes) &&
     isOptionalString(value.creditFor) &&
+    isOptionalBoolean(value.vatExempt) &&
     isString(value.createdAt)
   );
 }
@@ -104,7 +117,10 @@ export function isCompanySettings(value: unknown): value is CompanySettings {
     isOptionalString(value.plusgiro) &&
     typeof value.fSkatt === 'boolean' &&
     Number.isSafeInteger(value.paymentTermsDays) &&
-    (value.lateInterestPercent === undefined || isFiniteNumber(value.lateInterestPercent))
+    (value.lateInterestPercent === undefined || isFiniteNumber(value.lateInterestPercent)) &&
+    isOptionalBoolean(value.vatExempt) &&
+    isOptionalString(value.vatExemptText) &&
+    (value.logoDataUrl === undefined || isLogoDataUrl(value.logoDataUrl))
   );
 }
 

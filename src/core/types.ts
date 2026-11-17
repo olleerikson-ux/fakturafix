@@ -83,6 +83,8 @@ export interface Invoice {
   status: InvoiceStatus;
   paidDate?: IsoDate;
   notes?: string;
+  /** Sätts vid utfärdande från inställningarna. Momsbefriad faktura har 0 % moms på alla rader. */
+  vatExempt?: boolean;
   /** Id för den faktura som krediteras. Satt bara på kreditfakturor. */
   creditFor?: string;
   createdAt: string;
@@ -117,4 +119,10 @@ export interface CompanySettings {
   paymentTermsDays: number;
   /** Dröjsmålsränta i procent, skrivs ut på fakturan. */
   lateInterestPercent?: number;
+  /** Momsbefrielse för små företag. Saknas fältet tolkas det som false. */
+  vatExempt?: boolean;
+  /** Text som skrivs ut på momsbefriade fakturor. Standard: DEFAULT_VAT_EXEMPT_TEXT. */
+  vatExemptText?: string;
+  /** Logotyp som data-URL (PNG, JPEG eller SVG), högst cirka 300 000 tecken. */
+  logoDataUrl?: string;
 }
