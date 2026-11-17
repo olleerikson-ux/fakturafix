@@ -3,6 +3,7 @@
  */
 import { DEFAULT_VAT_EXEMPT_TEXT, type CompanySettings, type Store } from '../../core/index';
 import { h } from '../dom';
+import { canInstall, isIosBrowser, isStandalone, onInstallStateChange, promptInstall } from '../pwa';
 import { backupSection } from './backup-section';
 import {
   checkboxField,
@@ -269,5 +270,33 @@ export function settingsView(root: HTMLElement, store: Store, notice?: string): 
     h('section', { class: 'card' }, form),
     status,
     backupSection(store, () => settingsView(root, store, '✓ Säkerhetskopian är inläst. All data har ersatts.')),
+    installSection(),
   );
+}
+
+/** Sektionen "Installera appen": knapp när webbläsaren tillåter det, och en instruktion för iPhone. */
+function installSection(): HTMLElement {
+  const section = h('section', { class: 'card', 'aria-labelledby': 'install-title' });
+  const draw = () => {
+    const children: (Node | string)[] = [h('h2', { id: 'install-title' }, 'Installera appen')];
+    if (isStandalone()) {
+      children.push(h('p', {}, 'Appen är installerad på den här enheten.'));
+    } else if (canInstall()) {
+      children.push(
+        h('p', {}, 'Installera Fakturafix som en app. Den fungerar då även utan nätverk.'),
+        h('button', { type: 'button', class: 'btn-primary', onclick: () => void promptInstall() }, 'Installera appen'),
+      );
+    } else if (isIosBrowser()) {
+      children.push(h('p', {}, 'På iPhone: tryck på Dela och välj sedan "Lägg till på hemskärmen".'));
+    } else {
+      children.push(h('p', { class: 'hint' }, 'Din webbläsare erbjuder just nu ingen installation. Prova Chrome eller Edge på dator eller Android, eller Safari på iPhone.'));
+    }
+    section.replaceChildren(...children);
+  };
+  draw();
+  const stop = onInstallStateChange(() => {
+    if (section.isConnected) draw();
+    else stop();
+  });
+  return section;
 }
