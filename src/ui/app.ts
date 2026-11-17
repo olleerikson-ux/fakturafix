@@ -5,6 +5,7 @@
  */
 import type { Store } from '../core/index';
 import { h } from './dom';
+import { listenForInstallPrompt, registerServiceWorker } from './pwa';
 import { articlesView } from './views/articles';
 import { customersView } from './views/customers';
 import { overviewView } from './views/overview';
@@ -31,6 +32,8 @@ const routes: Route[] = [
 ];
 
 export function startApp(root: HTMLElement, store: Store): void {
+  listenForInstallPrompt();
+  registerServiceWorker();
   const brand = h('a', { class: 'brand', href: '#/oversikt' });
   brand.innerHTML = `${LOGO_SVG}<span>Fakturafix</span>`;
   const links = h('div', { class: 'nav-links', id: 'nav-links' }, ...routes.map((r) => h('a', { href: `#${r.path}` }, r.label)));
