@@ -1,10 +1,11 @@
 /**
  * Företagsinställningar (#/installningar): säljarens uppgifter på fakturan.
  */
-import { DEFAULT_VAT_EXEMPT_TEXT, type CompanySettings, type Store } from '../../core/index';
+import { DEFAULT_VAT_EXEMPT_TEXT, MAX_REMINDER_FEE, formatSek, parseSek, type CompanySettings, type Store } from '../../core/index';
 import { h } from '../dom';
 import { canInstall, isIosBrowser, isStandalone, onInstallStateChange, promptInstall } from '../pwa';
 import { backupSection } from './backup-section';
+import { exportSection } from './export-section';
 import {
   checkboxField,
   type FieldErrors,
@@ -41,6 +42,7 @@ export interface SettingsInput {
   vatExemptText: string;
   paymentTermsDays: string;
   lateInterestPercent: string;
+  reminderFee: string;
 }
 
 /** Tolkar ett heltal av siffror, t.ex. "30". Annat blir null. */
@@ -68,6 +70,11 @@ export function validateSettings(input: SettingsInput): FieldErrors {
   if (input.lateInterestPercent && parsePercent(input.lateInterestPercent) === null) {
     errors.lateInterestPercent = 'Ange räntan som ett tal, t.ex. 8 eller 8,5.';
   }
+  if (input.reminderFee) {
+    const fee = parseSek(input.reminderFee);
+    if (fee === null || fee < 0) errors.reminderFee = 'Ange avgiften i kronor, t.ex. 60.';
+    else if (fee > MAX_REMINDER_FEE) errors.reminderFee = `Påminnelseavgiften får vara högst ${formatSek(MAX_REMINDER_FEE)}.`;
+  }
   return errors;
 }
 
@@ -88,6 +95,7 @@ function readSettingsInput(form: HTMLFormElement): SettingsInput {
     vatExemptText: readText(form, 'vatExemptText'),
     paymentTermsDays: readText(form, 'paymentTermsDays'),
     lateInterestPercent: readText(form, 'lateInterestPercent'),
+    reminderFee: readText(form, 'reminderFee'),
   };
 }
 
@@ -112,6 +120,7 @@ function toSettings(input: SettingsInput, previous: CompanySettings | undefined,
     ...(logoDataUrl !== undefined ? { logoDataUrl } : {}),
     paymentTermsDays: parseWholeNumber(input.paymentTermsDays) ?? DEFAULT_PAYMENT_TERMS_DAYS,
     lateInterestPercent: parsePercent(input.lateInterestPercent) ?? undefined,
+    reminderFee: parseSek(input.reminderFee) || undefined,
   };
 }
 
@@ -241,6 +250,13 @@ export function settingsView(root: HTMLElement, store: Store, notice?: string): 
         value: formatPercent(s?.lateInterestPercent),
         inputmode: 'decimal',
       }),
+      field({
+        name: 'reminderFee',
+        label: 'Påminnelseavgift (kr)',
+        value: s?.reminderFee ? String(s.reminderFee / 100).replace('.', ',') : '',
+        inputmode: 'decimal',
+        hint: 'Får bara tas ut om det har avtalats i förväg, högst 60 kr',
+      }),
     ),
     h('p', { class: 'hint' }, 'Fält markerade med * är obligatoriska.'),
     h('div', { class: 'form-actions' }, h('button', { type: 'submit', class: 'btn-primary' }, 'Spara inställningar')),
@@ -270,6 +286,7 @@ export function settingsView(root: HTMLElement, store: Store, notice?: string): 
     h('section', { class: 'card' }, form),
     status,
     backupSection(store, () => settingsView(root, store, '✓ Säkerhetskopian är inläst. All data har ersatts.')),
+    exportSection(store),
     installSection(),
   );
 }

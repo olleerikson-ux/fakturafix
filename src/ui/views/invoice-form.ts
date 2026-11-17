@@ -9,6 +9,7 @@ import {
   addDays,
   calculateTotals,
   createCreditNote,
+  displayStatus,
   createOcr,
   formatSek,
   isValidIsoDate,
@@ -26,7 +27,7 @@ import {
 } from '../../core/index';
 import { printInvoice } from '../../print/print';
 import { openEmailDialog } from '../email-dialog';
-import { getEmailedDate } from '../email';
+import { getEmailedDate, getRemindedDate } from '../email';
 import { openArticlePicker } from '../article-picker';
 import { h } from '../dom';
 import {
@@ -201,6 +202,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
   // Momsbefrielse: en kreditfaktura följer originalet, annars gäller inställningen när fakturan utfärdas.
   const vatExemptNow = isCreditNote ? original?.vatExempt === true : store.getSettings()?.vatExempt === true;
   const creditReverse = isCreditNote && existing?.reverseCharge === true;
+  const overdue = existing !== undefined && issued && displayStatus(existing, today(), allInvoices) === 'overdue';
   const canCredit = issued && !isCreditNote && !alreadyCredited;
   const settings = store.getSettings();
   const customers = store.listCustomers().sort(byName);
@@ -558,6 +560,7 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
     ? [
         h('button', { type: 'button', class: 'btn-primary', onclick: printNow }, 'Skriv ut'),
         h('button', { type: 'button', class: 'btn-secondary', onclick: () => openEmailDialog(store, existing?.id ?? '', () => invoiceFormView(root, store, existing?.id)) }, 'Skicka med e-post'),
+        ...(overdue ? [h('button', { type: 'button', class: 'btn-secondary', onclick: () => openEmailDialog(store, existing?.id ?? '', () => invoiceFormView(root, store, existing?.id), undefined, 'reminder') }, 'Skicka påminnelse')] : []),
         ...copyButton,
         ...(canCredit ? [h('button', { type: 'button', class: 'btn-secondary', onclick: credit }, 'Kreditera')] : []),
       ]
@@ -638,7 +641,11 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
       : [];
 
   const emailedDate = existing && issued ? getEmailedDate(existing.id) : undefined;
-  const emailedNote = emailedDate ? [h('p', { class: 'emailed' }, `Mejlprogram öppnat ${emailedDate}.`)] : [];
+  const remindedDate = existing && issued ? getRemindedDate(existing.id) : undefined;
+  const emailedNote = [
+    ...(emailedDate ? [h('p', { class: 'emailed' }, `Mejlprogram öppnat ${emailedDate}.`)] : []),
+    ...(remindedDate ? [h('p', { class: 'emailed' }, `Senaste påminnelse: ${remindedDate}.`)] : []),
+  ];
   root.replaceChildren(h('h1', {}, title), status, ...(issued ? creditRef : []), vatNote, ...emailedNote, ...intro, h('section', { class: 'card' }, form));
   applyVatLock();
   updateTotals();

@@ -17,7 +17,7 @@ import './print.css';
 
 type Child = Node | string;
 
-function el<K extends keyof HTMLElementTagNameMap>(
+export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   className: string | undefined,
   ...children: Child[]
@@ -28,16 +28,16 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-function addressLines(address: Address): string[] {
+export function addressLines(address: Address): string[] {
   const country = address.country && address.country !== 'Sverige' ? [address.country] : [];
   return [address.street, `${address.postalCode} ${address.city}`.trim(), ...country];
 }
 
-function lines(...rows: string[]): Child[] {
+export function lines(...rows: string[]): Child[] {
   return rows.flatMap((row, i) => (i === 0 ? [row] : [document.createElement('br'), row]));
 }
 
-function metaRow(label: string, value: string): HTMLElement {
+export function metaRow(label: string, value: string): HTMLElement {
   return el('div', 'inv-meta-row', el('dt', undefined, label), el('dd', undefined, value));
 }
 
@@ -50,7 +50,7 @@ function numberText(quantity: number): string {
  * som original, så att "Avser faktura nr X, daterad Y" kan skrivas ut.
  */
 /** Logotypen visas bara som <img src>, aldrig som HTML, så att en SVG inte kan köra skript. */
-function logoElement(settings: CompanySettings): HTMLElement[] {
+export function logoElement(settings: CompanySettings): HTMLElement[] {
   const url = settings.logoDataUrl;
   if (!url || !url.startsWith('data:image/')) return [];
   const img = document.createElement('img');
@@ -178,22 +178,25 @@ export function renderInvoice(
     ),
   );
 
+  root.append(sellerFooter(settings, exempt));
+  return root;
+}
+
+/** Sidfot med säljarens uppgifter. Momsnumret döljs för momsbefriade. */
+export function sellerFooter(settings: CompanySettings, hideVatNumber: boolean): HTMLElement {
   const contact = [settings.email, settings.phone].filter((v): v is string => Boolean(v));
-  const ids = [`Org.nr: ${settings.orgNumber}`, settings.vatNumber && !exempt ? `Momsnr: ${settings.vatNumber}` : ''].filter(Boolean);
+  const ids = [`Org.nr: ${settings.orgNumber}`, settings.vatNumber && !hideVatNumber ? `Momsnr: ${settings.vatNumber}` : ''].filter(Boolean);
   const extra = [
     settings.fSkatt ? 'Godkänd för F-skatt' : '',
     settings.lateInterestPercent !== undefined
       ? `Dröjsmålsränta: ${String(settings.lateInterestPercent).replace('.', ',')} %`
       : '',
   ].filter(Boolean);
-  root.append(
-    el(
-      'footer',
-      'inv-footer',
-      el('div', undefined, el('strong', undefined, settings.name), ...[document.createElement('br')], ...lines(...addressLines(settings.address))),
-      el('div', undefined, ...lines(...ids, ...extra)),
-      el('div', undefined, ...lines(...contact)),
-    ),
+  return el(
+    'footer',
+    'inv-footer',
+    el('div', undefined, el('strong', undefined, settings.name), document.createElement('br'), ...lines(...addressLines(settings.address))),
+    el('div', undefined, ...lines(...ids, ...extra)),
+    el('div', undefined, ...lines(...contact)),
   );
-  return root;
 }
