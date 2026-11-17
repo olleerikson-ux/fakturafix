@@ -10,6 +10,9 @@ import type { CompanySettings, Customer, Invoice } from './types';
 
 export * from './types';
 
+/** Standardtext på momsbefriade fakturor. Ska verifieras mot Skatteverket. Användaren kan ändra den. */
+export const DEFAULT_VAT_EXEMPT_TEXT = 'Momsbefriad enligt reglerna om momsbefrielse för små företag.';
+
 // ---- Belopp och moms ----
 export { formatSek, parseSek } from './money';
 export { lineNet, calculateTotals } from './vat';

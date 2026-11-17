@@ -185,6 +185,17 @@ function assertNextFreeNumber(invoice: Invoice, lastNumber: number): void {
   }
 }
 
+/** En utfärdad momsbefriad faktura får inte ha moms på någon rad. */
+function assertVatExemptHasNoVat(invoice: Invoice): void {
+  if (!invoice.vatExempt || invoice.status === 'draft') return;
+  const taxed = invoice.lines.findIndex((line) => line.vatRate !== 0);
+  if (taxed !== -1) {
+    throw new Error(
+      `Faktura med momsbefrielse får inte ha moms. Rad ${taxed + 1} har ${invoice.lines[taxed]?.vatRate} % moms.`,
+    );
+  }
+}
+
 /** Regler för kreditfakturor och negativa belopp. `others` är övriga sparade fakturor. */
 function assertCreditRules(invoice: Invoice, others: Invoice[]): void {
   const total = calculateTotals(invoice.lines).total;
@@ -270,6 +281,7 @@ export function createLocalStore(storageArg?: Storage): Store {
     saveInvoice: (invoice) => {
       assertValidInvoiceNumber(invoice);
       assertPaidDateOnlyWhenPaid(invoice);
+      assertVatExemptHasNoVat(invoice);
       assertCreditRules(invoice, invoices().filter((other) => other.id !== invoice.id));
       // Läs den råa posten, inte bara de validerade, så att en utfärdad faktura
       // med trasig form inte kan kringgå låsningen.
