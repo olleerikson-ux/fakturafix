@@ -19,11 +19,11 @@ MVP:
 | Roll | Vem | Äger mappar |
 |---|---|---|
 | Ägare och styrelse | Människan | Fattar beslut om pengar, juridik och inriktning. Har delegerat merge till VD |
-| VD | Claude (orkestrerande session). Slår ihop PR:er efter QA-godkännande | `AGENTS.md`, `README.md`, `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.ts`, `tools/`, kontraktet i `src/core/types.ts` och signaturerna i `src/core/index.ts` |
+| VD | Claude (orkestrerande session). Slår ihop PR:er efter QA-godkännande | `AGENTS.md`, `README.md`, `package.json`, `tsconfig.json`, `vite.config.ts`, `app/index.html`, `src/main.ts`, `tools/`, kontraktet i `src/core/types.ts` och signaturerna i `src/core/index.ts` |
 | Utvecklare 1 | Claude-agent | `src/core/**` (implementation) |
-| Utvecklare 2 | Claude-agent | `src/ui/**` |
+| Utvecklare 2 | Claude-agent | `src/ui/**`, `src/print/**`, landningssidan (`index.html`, `guider/`, `public/`) |
 | QA | Claude-agent | `tests/**`, `.github/workflows/**`, granskning av PR:er |
-| Codex (ChatGPT) | Via GitHub (`@codex`) | `src/print/**` och extern kodgranskning av PR:er |
+| Codex (ChatGPT) | Via GitHub (`@codex review`) | Extern kodgranskning av PR:er. Skriver inte kod: molnmiljön kan inte pusha till GitHub |
 | Gemini | Via `npm run gemini` | Rådgivare och granskare. Skriver inte direkt i repot |
 
 ## Regler
@@ -68,7 +68,6 @@ MVP:
 ## Mappstruktur
 
 ```
-index.html            Startsida för Vite
 src/
   main.ts             Startpunkt
   core/               Affärslogik: moms, OCR, datum, lagring (Utvecklare 1)
@@ -81,6 +80,10 @@ src/
     styles.css
 tests/                Acceptanstester (QA)
 tools/gemini.mjs      Skickar uppgifter till Gemini (VD)
+index.html            Landningssida (statisk, för Google)
+app/index.html        Själva appen (/app/)
+guider/               Guidesidor (statiska)
+public/               robots.txt, sitemap.xml, bilder, favicon, 404
 .github/workflows/    CI (QA)
 ```
 
@@ -96,11 +99,10 @@ tools/gemini.mjs      Skickar uppgifter till Gemini (VD)
 
 Codex är kopplat till GitHub via ägarens ChatGPT-konto. Det finns ingen API-nyckel.
 - **Granskning:** VD skriver `@codex review` i en PR. Codex granskar som en andra granskare vid sidan av QA. QA:s godkännande krävs fortfarande.
-- **Utveckling:** VD delar ut uppgifter till Codex med `@codex` och en hänvisning till en issue. Samma regler gäller som för alla andra: en issue åt gången, bara egna mappar, aldrig merge och PR mot `main`.
-- **Branchnamn för Codex:** `codex/<issue-nr>-<kort-beskrivning>`.
+- **Ingen utveckling:** Codex molnmiljö saknar GitHub-remote och kan inte pusha. Kodarbete görs därför av Claude-utvecklarna.
 
 ## Gemini
 
-Gemini nås via `npm run gemini -- "<uppgift>" --file <sökväg>`. Använd det för en andra åsikt, kodgranskning eller research.
+Gemini nås via `npm run gemini -- "<uppgift>" --file <sökväg>`. Använd det för en andra åsikt, kodgranskning eller research. Obs: långa svar (fler än cirka 500 ord) brukar hänga sig, så be om korta svar.
 Skicka **aldrig** riktiga kund- eller fakturauppgifter till Gemini, eftersom gratisnivån kan användas för att träna Googles modeller.
 Granska alltid Geminis svar själv innan du använder det.
