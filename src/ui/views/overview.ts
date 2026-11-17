@@ -66,8 +66,21 @@ export function computeKpis(invoices: Invoice[], todayDate: string): OverviewKpi
   return kpis;
 }
 
+/** Sant om fakturan matchar sökningen på kundnamn, fakturanummer eller belopp. Tom sökning matchar allt. */
+export function matchesSearch(invoice: Invoice, customerName: string, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (q === '') return true;
+  if (customerName.toLowerCase().includes(q)) return true;
+  const compact = q.replace(/[\s\u00a0]/g, '').replace(/^#/, '');
+  if (compact === '') return true;
+  if (invoice.number > 0 && String(invoice.number).includes(compact)) return true;
+  const amount = formatSek(calculateTotals(invoice.lines).total).replace(/[\s\u00a0]|kr/g, '');
+  return amount.includes(compact.replace('.', ','));
+}
+
 export function overviewView(root: HTMLElement, store: Store): void {
   let filter = 'all';
+  let query = '';
   let message = '';
 
   const render = () => {
@@ -103,6 +116,7 @@ export function overviewView(root: HTMLElement, store: Store): void {
     const shown = invoices
       .map((invoice) => ({ invoice, status: displayStatus(invoice, todayDate, invoices) as string }))
       .filter((x) => filter === 'all' || x.status === filter)
+      .filter((x) => matchesSearch(x.invoice, store.getCustomer(x.invoice.customerId)?.name ?? '', query))
       .sort((a, b) => (a.invoice.number || Infinity) - (b.invoice.number || Infinity) || b.invoice.createdAt.localeCompare(a.invoice.createdAt));
 
     const rows = shown.map(({ invoice, status }) => {
@@ -141,11 +155,27 @@ export function overviewView(root: HTMLElement, store: Store): void {
       ...FILTERS.map((f) => h('option', { value: f.value, selected: f.value === filter }, f.label)),
     );
 
+    const search = h('input', {
+      type: 'search',
+      id: 'invoice-search',
+      placeholder: 'Kund, fakturanummer eller belopp',
+      value: query,
+      'aria-label': 'Sök bland fakturor',
+    });
+    search.addEventListener('input', () => {
+      query = search.value;
+      const caret = search.selectionStart ?? query.length;
+      render();
+      const next = root.querySelector<HTMLInputElement>('#invoice-search');
+      next?.focus();
+      next?.setSelectionRange(caret, caret);
+    });
+
     const list =
       invoices.length === 0
         ? h('div', { class: 'empty' }, h('p', {}, 'Du har inga fakturor än.'), h('a', { class: 'btn-primary', href: '#/fakturor/ny' }, 'Skapa din första faktura'))
         : shown.length === 0
-          ? h('p', { class: 'empty' }, 'Inga fakturor matchar filtret.')
+          ? h('p', { class: 'empty' }, 'Inga fakturor matchar sökningen eller filtret.')
           : h(
               'table',
               { class: 'table' },
@@ -202,7 +232,7 @@ export function overviewView(root: HTMLElement, store: Store): void {
       h(
         'section',
         { class: 'card' },
-        h('div', { class: 'filter' }, h('label', { for: 'status-filter' }, 'Visa: '), select),
+        h('div', { class: 'filter' }, search, h('label', { for: 'status-filter' }, 'Visa: '), select),
         list,
       ),
     );
