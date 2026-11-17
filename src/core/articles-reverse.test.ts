@@ -157,6 +157,12 @@ describe("omvänd skattskyldighet", () => {
     );
   });
 
+  it("ärver vatExempt från originalet", () => {
+    const original = sent(0, { reverseCharge: undefined, vatExempt: true });
+    expect(createCreditNote(original, "2026-11-10").vatExempt).toBe(true);
+    expect(createCreditNote(sent(0), "2026-11-10")).not.toHaveProperty("vatExempt");
+  });
+
   it("validerar reverseCharge på kund och faktura", () => {
     expect(isCustomer({ ...customer, reverseCharge: "ja" })).toBe(false);
     expect(isInvoice({ ...sent(0), reverseCharge: 1 })).toBe(false);
