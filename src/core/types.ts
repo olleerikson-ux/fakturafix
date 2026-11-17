@@ -134,6 +134,8 @@ export interface CompanySettings {
   paymentTermsDays: number;
   /** Dröjsmålsränta i procent, skrivs ut på fakturan. */
   lateInterestPercent?: number;
+  /** Påminnelseavgift i öre (t.ex. 6000 för 60 kr). Får bara tas ut om den är avtalad med kunden. */
+  reminderFee?: Ore;
   /** Momsbefrielse för små företag. Saknas fältet tolkas det som false. */
   vatExempt?: boolean;
   /** Text som skrivs ut på momsbefriade fakturor. Standard: DEFAULT_VAT_EXEMPT_TEXT. */

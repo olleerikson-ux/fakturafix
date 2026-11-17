@@ -42,6 +42,11 @@ function formatUtc(date: Date): IsoDate {
   return `${pad(date.getUTCFullYear(), 4)}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 }
 
+/** Antal hela dagar från `from` till `to` (negativt om `to` ligger före). Kastar fel vid ogiltigt datum. */
+export function daysBetween(from: IsoDate, to: IsoDate): number {
+  return Math.round((parseIsoDate(to) - parseIsoDate(from)) / MS_PER_DAY);
+}
+
 /** Lägger till (eller drar ifrån, vid negativt värde) hela dagar på ett ISO-datum. */
 export function addDays(date: IsoDate, days: number): IsoDate {
   if (!Number.isInteger(days)) throw new Error(`Antal dagar måste vara ett heltal: ${days}`);
