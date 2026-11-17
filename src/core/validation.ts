@@ -4,7 +4,7 @@
  * används som Customer, Invoice eller CompanySettings.
  */
 import { isValidIsoDate } from './dates';
-import { VAT_RATES, type Address, type CompanySettings, type Customer, type Invoice, type InvoiceLine } from './types';
+import { VAT_RATES, type Address, type Article, type CompanySettings, type Customer, type Invoice, type InvoiceLine } from './types';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -55,7 +55,20 @@ export function isCustomer(value: unknown): value is Customer {
     isOptionalString(value.vatNumber) &&
     isOptionalString(value.email) &&
     isOptionalString(value.reference) &&
+    isOptionalBoolean(value.reverseCharge) &&
     isAddress(value.address) &&
+    isString(value.createdAt)
+  );
+}
+
+export function isArticle(value: unknown): value is Article {
+  return (
+    isRecord(value) &&
+    isString(value.id) &&
+    isString(value.description) &&
+    isOptionalString(value.unit) &&
+    Number.isSafeInteger(value.unitPrice) &&
+    (VAT_RATES as readonly unknown[]).includes(value.vatRate) &&
     isString(value.createdAt)
   );
 }
@@ -100,6 +113,7 @@ export function isInvoice(value: unknown): value is Invoice {
     isOptionalString(value.notes) &&
     isOptionalString(value.creditFor) &&
     isOptionalBoolean(value.vatExempt) &&
+    isOptionalBoolean(value.reverseCharge) &&
     isString(value.createdAt)
   );
 }

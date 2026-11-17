@@ -6,9 +6,12 @@
  * exporteras vidare härifrån. Signaturerna är ett kontrakt: ändra dem inte
  * utan VD:s godkännande.
  */
-import type { CompanySettings, Customer, Invoice } from './types';
+import type { Article, CompanySettings, Customer, Invoice } from './types';
 
 export * from './types';
+
+/** Text som skrivs ut på fakturor med omvänd skattskyldighet. */
+export const REVERSE_CHARGE_TEXT = 'Omvänd skattskyldighet';
 
 /** Standardtext på momsbefriade fakturor. Ska verifieras mot Skatteverket. Användaren kan ändra den. */
 export const DEFAULT_VAT_EXEMPT_TEXT = 'Momsbefriad enligt reglerna om momsbefrielse för små företag.';
@@ -39,6 +42,11 @@ export interface Store {
   saveCustomer(customer: Customer): void;
   deleteCustomer(id: string): void;
 
+  listArticles(): Article[];
+  saveArticle(article: Article): void;
+  /** Raderar en artikel. Befintliga fakturor påverkas inte, eftersom raderna är kopior. */
+  deleteArticle(id: string): void;
+
   listInvoices(): Invoice[];
   getInvoice(id: string): Invoice | undefined;
   saveInvoice(invoice: Invoice): void;
@@ -56,6 +64,7 @@ export interface Store {
   replaceAll(data: {
     customers: Customer[];
     invoices: Invoice[];
+    articles?: Article[];
     settings?: CompanySettings;
     lastInvoiceNumber: number;
   }): void;

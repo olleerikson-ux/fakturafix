@@ -1,6 +1,7 @@
 import type { Store } from "./index";
-import type { CompanySettings, Customer, Invoice } from "./types";
+import type { Article, CompanySettings, Customer, Invoice } from "./types";
 import {
+  isArticle,
   isCompanySettings,
   isCustomer,
   isInvoice,
@@ -14,6 +15,8 @@ export interface Backup {
   exportedAt: string;
   customers: Customer[];
   invoices: Invoice[];
+  /** Saknas i äldre säkerhetskopior. */
+  articles?: Article[];
   settings?: CompanySettings;
   /** Högsta utdelade fakturanummer (högvattenmärket). */
   lastInvoiceNumber: number;
@@ -30,6 +33,7 @@ export function exportBackup(store: Store): Backup {
     exportedAt: new Date().toISOString(),
     customers: store.listCustomers(),
     invoices: store.listInvoices(),
+    articles: store.listArticles(),
     ...(settings ? { settings } : {}),
     lastInvoiceNumber: store.nextInvoiceNumber() - 1,
   };
@@ -99,6 +103,17 @@ export function parseBackup(json: string): Backup {
   const invoices = readList(data.invoices, isInvoice, (v) =>
     describe("Faktura", v, "number"),
   );
+  const articles =
+    data.articles === undefined
+      ? undefined
+      : readList(data.articles, isArticle, (v) => describe("Artikel", v, "description"));
+  if (articles) {
+    const ids = new Set<string>();
+    for (const article of articles) {
+      if (ids.has(article.id)) throw new Error(`Artikel ${article.description} förekommer flera gånger.`);
+      ids.add(article.id);
+    }
+  }
   if (data.settings !== undefined && !isCompanySettings(data.settings)) {
     throw new Error("Företagsinställningarna är ogiltiga.");
   }
@@ -115,6 +130,7 @@ export function parseBackup(json: string): Backup {
     exportedAt: data.exportedAt,
     customers,
     invoices,
+    ...(articles ? { articles } : {}),
     ...(data.settings !== undefined ? { settings: data.settings } : {}),
     lastInvoiceNumber: data.lastInvoiceNumber as number,
   };
@@ -135,6 +151,7 @@ export function importBackup(
   store.replaceAll({
     customers: backup.customers,
     invoices: backup.invoices,
+    ...(backup.articles ? { articles: backup.articles } : {}),
     ...(backup.settings ? { settings: backup.settings } : {}),
     lastInvoiceNumber: highest,
   });
