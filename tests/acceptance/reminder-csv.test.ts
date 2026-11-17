@@ -16,13 +16,13 @@ const withInterest = (percent: number | undefined) =>
   settings(percent === undefined ? { lateInterestPercent: undefined } : { lateInterestPercent: percent });
 
 describe('reminderAmounts: dröjsmålsränta (uträknad för hand)', () => {
-  it('10 dagar försenad vid 8 %: 125 000 × 0,08 × 10 / 365 = 2 739,7 → 2 740 öre', () => {
+  it('10 dagar försenad vid 8 %: 125 000 × 0,08 × 10 / 365 = 273,97 → 274 öre', () => {
     const r = reminderAmounts(due(), withInterest(8), '2026-04-10');
     expect(r.principal).toBe(125000);
     expect(r.daysLate).toBe(10);
-    expect(r.interest).toBe(2740);
+    expect(r.interest).toBe(274);
     expect(r.fee).toBe(0);
-    expect(r.total).toBe(127740);
+    expect(r.total).toBe(125274);
   });
 
   it('dagräkningen börjar dagen efter förfallodatum och inkluderar today', () => {
@@ -70,7 +70,7 @@ describe('reminderAmounts: påminnelseavgift', () => {
   it('använder reminderFee från inställningarna', () => {
     const r = reminderAmounts(due(), settings({ lateInterestPercent: 8, reminderFee: 6000 }), '2026-04-10');
     expect(r.fee).toBe(6000);
-    expect(r.total).toBe(125000 + 2740 + 6000);
+    expect(r.total).toBe(125000 + 274 + 6000);
   });
 
   it('lägre avgift än taket följer inställningen', () => {
@@ -85,7 +85,7 @@ describe('reminderAmounts: påminnelseavgift', () => {
   it('avgiften kapas till 60 kr (6 000 öre) och kastar inget fel', () => {
     const over = reminderAmounts(due(), settings({ lateInterestPercent: 8, reminderFee: 6001 }), '2026-04-10');
     expect(over.fee).toBe(6000);
-    expect(over.total).toBe(125000 + 2740 + 6000);
+    expect(over.total).toBe(125000 + 274 + 6000);
     expect(reminderAmounts(due(), settings({ lateInterestPercent: 8, reminderFee: 100000 }), '2026-04-10').fee).toBe(6000);
   });
 });
