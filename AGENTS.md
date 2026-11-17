@@ -19,7 +19,7 @@ MVP:
 | Roll | Vem | Äger mappar |
 |---|---|---|
 | Ägare och styrelse | Människan | Fattar beslut om pengar, juridik och inriktning. Har delegerat merge till VD |
-| VD | Claude (orkestrerande session). Slår ihop PR:er efter QA-godkännande | `AGENTS.md`, `README.md`, `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.ts`, `tools/`, kontraktet i `src/core/types.ts` och signaturerna i `src/core/index.ts` |
+| VD | Claude (orkestrerande session). Slår ihop PR:er efter QA-godkännande | `AGENTS.md`, `README.md`, `package.json`, `tsconfig.json`, `vite.config.ts`, `app/index.html`, `src/main.ts`, `tools/`, kontraktet i `src/core/types.ts` och signaturerna i `src/core/index.ts` |
 | Utvecklare 1 | Claude-agent | `src/core/**` (implementation) |
 | Utvecklare 2 | Claude-agent | `src/ui/**`, `src/print/**`, landningssidan (`index.html`, `guider/`, `public/`) |
 | QA | Claude-agent | `tests/**`, `.github/workflows/**`, granskning av PR:er |
