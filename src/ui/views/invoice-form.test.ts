@@ -244,13 +244,23 @@ describe('invoiceFormView', () => {
     button(root, '+ Lägg till från artikel').click();
     document.querySelector<HTMLButtonElement>('.article-item')?.click();
     const lines = root.querySelectorAll('fieldset.line');
-    expect(lines).toHaveLength(before + 1);
+    expect(before).toBe(1);
+    expect(lines).toHaveLength(1);
     const last = lines[lines.length - 1] as HTMLElement;
     const val = (suffix: string) => (last.querySelector(`[name$="-${suffix}"]`) as HTMLInputElement).value;
     expect(val('description')).toBe('Konsulttimme');
     expect(val('quantity')).toBe('1');
     expect(val('unitPrice')).toBe('950,00');
     expect(val('vatRate')).toBe('12');
+  });
+
+  it('artikel läggs till under en rad som redan är ifylld', () => {
+    store.saveArticle({ id: 'a1', description: 'Bok', unitPrice: 20000, vatRate: 6, createdAt: '2026-01-01T00:00:00.000Z' });
+    store.saveInvoice(draft);
+    invoiceFormView(root, store, 'f1');
+    button(root, '+ Lägg till från artikel').click();
+    document.querySelector<HTMLButtonElement>('.article-item')?.click();
+    expect(root.querySelectorAll('fieldset.line')).toHaveLength(2);
   });
 
   it('delar ut fakturanummer och OCR när fakturan markeras som skickad', () => {

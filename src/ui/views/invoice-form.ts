@@ -351,6 +351,12 @@ export function invoiceFormView(root: HTMLElement, store: Store, invoiceId?: str
             unitPrice: oreToInput(article.unitPrice),
             vatRate: article.vatRate,
           };
+          const only = readInput().lines;
+          const blankId = only.length === 1 && only[0] && isBlankLine(only[0]) ? only[0].id : undefined;
+          if (blankId) {
+            lineIds.splice(lineIds.indexOf(blankId), 1);
+            linesContainer.querySelector(`[data-line="${blankId}"]`)?.remove();
+          }
           addLine(line);
           updateTotals();
           form.querySelector<HTMLInputElement>(`[name="${lineField(line.id, 'quantity')}"]`)?.focus();
